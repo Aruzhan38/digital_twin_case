@@ -1,3 +1,5 @@
+import HealthIndex from "./HealthIndex.jsx";
+
 const statusColors = {
   normal: "#1f9d55",
   warning: "#d69e2e",
@@ -49,24 +51,10 @@ export default function Dashboard({ data }) {
     recommendations,
   } = data;
 
-  const healthColor = getHealthColor(health);
-
   return (
     <section style={styles.page}>
       <h1 style={styles.title}>Digital Twin Dashboard</h1>
-
-      <div style={styles.healthCard}>
-        <p style={styles.sectionLabel}>Health Index</p>
-        <div style={{ ...styles.healthValue, color: healthColor }}>{health}</div>
-        <p
-          style={{
-            ...styles.statusBadge,
-            backgroundColor: statusColors[status] ?? healthColor,
-          }}
-        >
-          {status}
-        </p>
-      </div>
+      <HealthIndex health={health} status={status} />
 
       <div style={styles.telemetryGrid}>
         <div style={styles.metricCard}>
