@@ -10,6 +10,7 @@ from storage import save
 
 
 logger = logging.getLogger(__name__)
+MODE = "normal"
 
 
 def generate_payload() -> dict[str, Any]:
@@ -26,14 +27,24 @@ def generate_payload() -> dict[str, Any]:
     return payload
 
 
-async def websocket_handler(websocket: WebSocket, load_mode: str = "normal") -> None:
+def set_mode(mode: str) -> str:
+    global MODE
+    MODE = mode
+    return MODE
+
+
+def get_mode() -> str:
+    return MODE
+
+
+async def websocket_handler(websocket: WebSocket, load_mode: str | None = None) -> None:
     await websocket.accept()
     print("[websocket] client connected")
 
-    sleep_seconds = 0.1 if load_mode == "highload" else 1.0
-
     while True:
         try:
+            active_mode = load_mode or MODE
+            sleep_seconds = 0.1 if active_mode == "highload" else 1.0
             payload = generate_payload()
             await websocket.send_json(payload)
             print(f"[websocket] streamed telemetry at {payload['timestamp']}")
@@ -52,6 +63,6 @@ async def websocket_handler(websocket: WebSocket, load_mode: str = "normal") -> 
 
 async def handle_websocket_connection(
     websocket: WebSocket,
-    load_mode: str = "normal",
+    load_mode: str | None = None,
 ) -> None:
     await websocket_handler(websocket, load_mode=load_mode)

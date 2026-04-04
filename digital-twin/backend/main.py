@@ -2,13 +2,21 @@ import asyncio
 from contextlib import suppress
 
 from fastapi import FastAPI, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
 
 from storage import get_history
-from websocket import generate_payload, websocket_handler
+from websocket import generate_payload, get_mode, set_mode, websocket_handler
 
 
 # Run with: uvicorn main:app --reload
 app = FastAPI(title="Digital Twin Backend")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 async def telemetry_producer() -> None:
@@ -49,3 +57,12 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 @app.get("/history")
 def history() -> list:
     return get_history()
+
+
+@app.get("/mode/{mode}")
+def update_mode(mode: str) -> dict[str, str]:
+    if mode not in {"normal", "highload"}:
+        return {"mode": get_mode(), "message": "Invalid mode"}
+
+    active_mode = set_mode(mode)
+    return {"mode": active_mode, "message": f"Mode set to {active_mode}"}

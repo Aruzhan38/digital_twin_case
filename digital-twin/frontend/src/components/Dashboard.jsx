@@ -1,20 +1,45 @@
+import { useMemo, useState } from "react";
+
 import Alerts from "./Alerts.jsx";
 import Charts from "./Charts.jsx";
 import HealthIndex from "./HealthIndex.jsx";
+import Recommendations from "./Recommendations.jsx";
+import Replay from "./Replay.jsx";
 
-function renderList(items, emptyMessage, prefix) {
-  if (!items || items.length === 0) {
-    return <li>{emptyMessage}</li>;
-  }
-
-  return items.map((item) => (
-    <li key={item}>
-      {prefix} {item}
-    </li>
-  ));
-}
+const MODE_URL = "http://localhost:8000/mode";
 
 export default function Dashboard({ data, history }) {
+  const [replayData, setReplayData] = useState([]);
+  const [mode, setMode] = useState("normal");
+  const [modeLoading, setModeLoading] = useState(false);
+
+  const chartData = useMemo(() => {
+    if (replayData.length > 0) {
+      return replayData.slice(-30);
+    }
+
+    return history;
+  }, [history, replayData]);
+
+  async function handleModeChange(nextMode) {
+    setModeLoading(true);
+
+    try {
+      const response = await fetch(`${MODE_URL}/${nextMode}`);
+
+      if (!response.ok) {
+        throw new Error(`Mode update failed with status ${response.status}`);
+      }
+
+      const payload = await response.json();
+      setMode(payload.mode);
+    } catch (error) {
+      console.error("Mode update failed:", error);
+    } finally {
+      setModeLoading(false);
+    }
+  }
+
   if (!data) {
     return (
       <section style={styles.emptyState}>
@@ -40,6 +65,29 @@ export default function Dashboard({ data, history }) {
       <h1 style={styles.title}>Digital Twin Dashboard</h1>
       <HealthIndex health={health} status={status} />
 
+      <div style={styles.controlsCard}>
+        <div>
+          <h2 style={styles.infoTitle}>Simulation Mode</h2>
+          <p style={styles.modeText}>Current mode: {mode}</p>
+        </div>
+        <div style={styles.modeActions}>
+          <button
+            onClick={() => handleModeChange("normal")}
+            style={styles.modeButton}
+            disabled={modeLoading}
+          >
+            Normal
+          </button>
+          <button
+            onClick={() => handleModeChange("highload")}
+            style={styles.modeButton}
+            disabled={modeLoading}
+          >
+            High Load
+          </button>
+        </div>
+      </div>
+
       <div style={styles.telemetryGrid}>
         <div style={styles.metricCard}>
           <p style={styles.metricLabel}>Speed</p>
@@ -59,16 +107,16 @@ export default function Dashboard({ data, history }) {
         </div>
       </div>
 
-      <Charts data={history} />
+      <Replay
+        onReplayData={setReplayData}
+        onReplayExit={() => setReplayData([])}
+        replayActive={replayData.length > 0}
+      />
+      <Charts data={chartData} />
 
       <div style={styles.infoGrid}>
         <Alerts reasons={reasons} />
-        <div style={styles.infoCard}>
-          <h2 style={styles.infoTitle}>Recommendations</h2>
-          <ul style={styles.list}>
-            {renderList(recommendations, "No actions needed", "->")}
-          </ul>
-        </div>
+        <Recommendations recommendations={recommendations} />
       </div>
     </section>
   );
@@ -103,6 +151,38 @@ const styles = {
     margin: 0,
     fontSize: "1.1rem",
   },
+  controlsCard: {
+    maxWidth: "1100px",
+    margin: "0 auto 24px",
+    padding: "20px",
+    borderRadius: "16px",
+    backgroundColor: "#ffffff",
+    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "16px",
+    flexWrap: "wrap",
+  },
+  modeText: {
+    margin: "6px 0 0",
+    color: "#52606d",
+    textTransform: "capitalize",
+  },
+  modeActions: {
+    display: "flex",
+    gap: "12px",
+    flexWrap: "wrap",
+  },
+  modeButton: {
+    border: "none",
+    borderRadius: "10px",
+    padding: "10px 16px",
+    backgroundColor: "#0f766e",
+    color: "#ffffff",
+    fontWeight: 600,
+    cursor: "pointer",
+  },
   telemetryGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
@@ -135,20 +215,8 @@ const styles = {
     maxWidth: "960px",
     margin: "0 auto",
   },
-  infoCard: {
-    padding: "20px",
-    borderRadius: "16px",
-    backgroundColor: "#ffffff",
-    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
-  },
   infoTitle: {
-    margin: "0 0 12px",
-    fontSize: "1.2rem",
-  },
-  list: {
     margin: 0,
-    paddingLeft: "20px",
-    display: "grid",
-    gap: "8px",
+    fontSize: "1.2rem",
   },
 };
