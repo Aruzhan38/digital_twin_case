@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 
 import Alerts from "./Alerts.jsx";
 import Charts from "./Charts.jsx";
@@ -6,7 +6,7 @@ import HealthIndex from "./HealthIndex.jsx";
 import Recommendations from "./Recommendations.jsx";
 import Replay from "./Replay.jsx";
 
-const MODE_URL = "http://localhost:8000/mode";
+const MODE_URL = "http://127.0.0.1:8000/mode";
 
 export default function Dashboard({ data, history }) {
   const [replayData, setReplayData] = useState([]);

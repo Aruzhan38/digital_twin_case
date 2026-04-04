@@ -1,4 +1,4 @@
-const WEBSOCKET_URL = "ws://localhost:8000/ws";
+const WEBSOCKET_URL = "ws://127.0.0.1:8000/ws";
 
 export function connectWebSocket(onDataCallback) {
   const socket = new WebSocket(WEBSOCKET_URL);

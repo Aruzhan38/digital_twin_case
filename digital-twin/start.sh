@@ -34,7 +34,7 @@ command -v npm >/dev/null 2>&1 || {
   exit 1
 }
 
-if ! python3 -c "import fastapi, uvicorn" >/dev/null 2>&1; then
+if ! python3 -c "import fastapi, uvicorn, websockets" >/dev/null 2>&1; then
   echo "Installing backend dependencies..."
   cd "$BACKEND_DIR"
   pip3 install -r requirements.txt

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import Dashboard from "./components/Dashboard.jsx";
 import { connectWebSocket } from "./services/websocket";

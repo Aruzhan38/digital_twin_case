@@ -1,3 +1,5 @@
+import React from "react";
+
 function getHealthColor(health) {
   if (health >= 80) {
     return "#1f9d55";

@@ -1,3 +1,5 @@
+import React from "react";
+
 export default function Alerts({ reasons }) {
   const hasAlerts = reasons && reasons.length > 0;
 

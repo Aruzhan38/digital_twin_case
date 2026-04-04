@@ -1,6 +1,6 @@
-import { useState } from "react";
+import React, { useState } from "react";
 
-const HISTORY_URL = "http://localhost:8000/history";
+const HISTORY_URL = "http://127.0.0.1:8000/history";
 
 export default function Replay({ onReplayData, onReplayExit, replayActive }) {
   const [loading, setLoading] = useState(false);

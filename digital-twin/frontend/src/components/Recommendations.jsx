@@ -1,3 +1,5 @@
+import React from "react";
+
 export default function Recommendations({ recommendations }) {
   const hasRecommendations = recommendations && recommendations.length > 0;
 
