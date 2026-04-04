@@ -114,3 +114,7 @@ def calculate_health_index(metrics: dict[str, Any]) -> dict[str, Any]:
         "reasons": reasons,
         "recommendations": recommendations,
     }
+
+
+def calculate_health(metrics: dict[str, Any]) -> dict[str, Any]:
+    return calculate_health_index(metrics)

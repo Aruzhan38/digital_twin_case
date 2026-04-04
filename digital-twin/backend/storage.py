@@ -16,3 +16,7 @@ def add_event(event: dict) -> None:
 def get_history() -> list:
     with _lock:
         return history.copy()
+
+
+def save(event: dict) -> None:
+    add_event(event)

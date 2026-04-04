@@ -4,9 +4,9 @@ from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from health import calculate_health_index as calculate_health
+from health import calculate_health
 from simulator import generate_data
-from storage import add_event as save
+from storage import save
 
 
 logger = logging.getLogger(__name__)
@@ -17,25 +17,25 @@ async def websocket_handler(websocket: WebSocket, load_mode: str = "normal") -> 
 
     sleep_seconds = 0.1 if load_mode == "highload" else 1.0
 
-    try:
-        while True:
-            try:
-                telemetry = generate_data()
-                health_info = calculate_health(telemetry)
+    while True:
+        try:
+            telemetry = generate_data()
+            health_info = calculate_health(telemetry)
 
-                payload: dict[str, Any] = {
-                    **telemetry,
-                    **health_info,
-                }
+            payload: dict[str, Any] = {
+                **telemetry,
+                **health_info,
+            }
 
-                save(payload)
-                await websocket.send_json(payload)
-                await asyncio.sleep(sleep_seconds)
-            except Exception as exc:
-                logger.exception("Telemetry streaming error: %s", exc)
-                await asyncio.sleep(sleep_seconds)
-    except WebSocketDisconnect:
-        logger.info("WebSocket client disconnected")
+            save(payload)
+            await websocket.send_json(payload)
+            await asyncio.sleep(sleep_seconds)
+        except WebSocketDisconnect:
+            logger.info("WebSocket client disconnected")
+            break
+        except Exception as exc:
+            logger.exception("Telemetry streaming error: %s", exc)
+            await asyncio.sleep(sleep_seconds)
 
 
 async def handle_websocket_connection(
