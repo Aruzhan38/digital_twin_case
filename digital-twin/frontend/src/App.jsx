@@ -1,3 +1,3 @@
 export default function App() {
-  return <div>Digital Twin App</div>;
+  return <h1>Digital Twin Dashboard</h1>;
 }
