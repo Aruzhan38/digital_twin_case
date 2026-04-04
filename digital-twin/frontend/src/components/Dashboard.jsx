@@ -242,6 +242,7 @@ export default function Dashboard({
     brake_pressure: brakePressure,
     current,
     coolant_temp: coolantTemp,
+    explanation,
     factors,
     oil_pressure: oilPressure,
     oil_temp: oilTemp,
@@ -287,7 +288,9 @@ export default function Dashboard({
             </div>
           </div>
           <div style={styles.connectionBlock}>
-            <ConnectionStatus status={connectionStatus} />
+            <div style={styles.connectionCard}>
+              <ConnectionStatus status={connectionStatus} />
+            </div>
           </div>
         </header>
 
@@ -375,7 +378,7 @@ export default function Dashboard({
             <section style={styles.healthPanel}>
               <HealthIndex health={health} status={status || statusCode} />
               <div style={styles.healthFactorsWrap}>
-                <HealthFactors factors={factors} />
+                <HealthFactors explanation={explanation} factors={factors} reasons={activeData.reasons} />
               </div>
             </section>
 
@@ -447,9 +450,9 @@ const styles = {
   },
   topBar: {
     display: "grid",
-    gridTemplateColumns: "320px minmax(0, 1fr) auto",
+    gridTemplateColumns: "390px minmax(0, 1fr) auto",
     alignItems: "center",
-    gap: "16px",
+    gap: "12px",
     marginBottom: "16px",
   },
   topTitleBlock: {
@@ -471,7 +474,7 @@ const styles = {
     minWidth: 0,
     display: "grid",
     gridTemplateColumns: "minmax(0, 1fr) auto",
-    gap: "16px",
+    gap: "12px",
     alignItems: "stretch",
   },
   connectionBlock: {
@@ -488,14 +491,14 @@ const styles = {
   },
   dashboardGrid: {
     display: "grid",
-    gridTemplateColumns: "320px minmax(0, 1fr) 340px",
-    gap: "16px",
+    gridTemplateColumns: "390px minmax(0, 1fr) 330px",
+    gap: "20px",
     alignItems: "stretch",
   },
   leftRail: {
     minWidth: 0,
     display: "grid",
-    gap: "12px",
+    gap: "14px",
     alignContent: "start",
   },
   centerRail: {
@@ -628,7 +631,7 @@ const styles = {
     ...surface,
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: "16px",
+    gap: "12px",
     minWidth: 0,
     padding: 0,
     background: "transparent",
@@ -638,8 +641,8 @@ const styles = {
   },
   topStatusPill: {
     minWidth: 0,
-    minHeight: "80px",
-    borderRadius: "20px",
+    minHeight: "72px",
+    borderRadius: "18px",
     padding: "12px 16px",
     background: "linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(10, 15, 27, 0.98) 100%)",
     border: "1px solid rgba(148, 163, 184, 0.16)",
@@ -654,12 +657,12 @@ const styles = {
     color: "#64748b",
     fontSize: "12px",
     letterSpacing: "0.14em",
-    opacity: 0.7,
+    opacity: 0.75,
   },
   topStatusValue: {
     color: "#f8fafc",
-    fontSize: "20px",
-    fontWeight: 600,
+    fontSize: "16px",
+    fontWeight: 700,
     letterSpacing: "0.04em",
     overflow: "hidden",
     textOverflow: "ellipsis",
@@ -673,8 +676,18 @@ const styles = {
   },
   csvCard: {
     ...surface,
-    minHeight: "84px",
-    padding: "0 18px",
+    minHeight: "72px",
+    padding: "0 14px",
+    borderRadius: "18px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  connectionCard: {
+    ...surface,
+    minHeight: "72px",
+    padding: "0 14px",
+    borderRadius: "18px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

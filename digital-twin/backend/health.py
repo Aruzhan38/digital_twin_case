@@ -14,6 +14,23 @@ HEALTH_WARNING_THRESHOLD = int(os.getenv("HEALTH_WARNING_THRESHOLD", "80"))
 HEALTH_CRITICAL_THRESHOLD = int(os.getenv("HEALTH_CRITICAL_THRESHOLD", "50"))
 
 
+def _build_explanation(factors: list[dict[str, Any]], status: str) -> str:
+    if not factors:
+        return "Индекс в норме: критичных факторов ухудшения не обнаружено"
+
+    factor_names = [str(factor["name"]).lower() for factor in factors[:3]]
+
+    if len(factor_names) == 1:
+        details = factor_names[0]
+    elif len(factor_names) == 2:
+        details = f"{factor_names[0]} и {factor_names[1]}"
+    else:
+        details = f"{', '.join(factor_names[:-1])} и {factor_names[-1]}"
+
+    prefix = "Снижение индекса связано" if status != "Норма" else "На индекс влияют"
+    return f"{prefix} с {details}"
+
+
 def calculate_health_index(metrics: dict[str, Any]) -> dict[str, Any]:
     health = 100
     reasons: list[str] = []
@@ -145,9 +162,11 @@ def calculate_health_index(metrics: dict[str, Any]) -> dict[str, Any]:
     health = max(0, min(100, int(round(health))))
 
     factors = [{"name": name, "impact": impact} for name, impact in factor_impacts.items() if impact != 0]
-    factors.sort(key=lambda factor: abs(factor["impact"]), reverse=True)
+    factors.sort(key=lambda factor: factor["impact"])
     factors = factors[:5]
     recommendations = recommendations[:5]
+    reasons = reasons[:5]
+    explanation = _build_explanation(factors, status)
 
     system_status = {
         "engine": {
@@ -172,6 +191,7 @@ def calculate_health_index(metrics: dict[str, Any]) -> dict[str, Any]:
         "status": status,
         "status_code": "critical" if status == "Критично" else "warning" if status == "Внимание" else "normal",
         "factors": factors,
+        "explanation": explanation,
         "reasons": reasons,
         "recommendations": recommendations,
         "alerts": alerts,
