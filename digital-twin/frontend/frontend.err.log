@@ -1,1 +1,2 @@
-^C
+[31merror when starting dev server:
+Error: EPERM: operation not permitted, unlink 'D:\.vscode\hackaton\digital_twin_case\digital-twin\frontend\node_modules\.vite\deps\chunk-REFQX4J5.js'[39m
