@@ -42,6 +42,7 @@ class TelemetryPoint(BaseModel):
     rpm: int = Field(ge=0, le=4000)
     alert: bool
     timestamp: str
+    timestamp_ms: int = Field(ge=0)
     coolant_temp: float = Field(ge=0, le=150)
     oil_pressure: float = Field(ge=0, le=10)
     anomaly: str | None = None
@@ -227,6 +228,8 @@ def generate_simulated_data() -> dict[str, Any]:
         ]
     )
 
+    timestamp = _next_timestamp()
+
     telemetry = TelemetryPoint(
         speed=speed,
         fuel_level=fuel_level,
@@ -237,7 +240,8 @@ def generate_simulated_data() -> dict[str, Any]:
         current=round(_STATE.current, 1),
         rpm=round(_STATE.rpm),
         alert=alert,
-        timestamp=_next_timestamp(),
+        timestamp=timestamp,
+        timestamp_ms=int(time.time() * 1000),
         coolant_temp=round(_STATE.coolant_temp, 1),
         oil_pressure=round(_STATE.oil_pressure, 2),
         anomaly=anomaly,

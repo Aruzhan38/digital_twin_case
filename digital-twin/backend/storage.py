@@ -7,7 +7,8 @@ from threading import Lock
 from typing import Any
 
 
-_RETENTION_SECONDS = int(os.getenv("HISTORY_RETENTION_SECONDS", "600"))
+MAX_HISTORY = int(os.getenv("MAX_HISTORY", "300"))  # ~5 minutes
+_RETENTION_SECONDS = int(os.getenv("HISTORY_RETENTION_SECONDS", str(MAX_HISTORY)))
 _MAX_EVENTS = int(os.getenv("MAX_EVENTS", "100"))
 history: deque[dict[str, Any]] = deque()
 events: deque[dict[str, Any]] = deque(maxlen=_MAX_EVENTS)

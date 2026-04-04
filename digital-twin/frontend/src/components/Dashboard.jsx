@@ -79,8 +79,8 @@ function translateSystemStatus(statusMap) {
 
 function card(title, children, accent) {
   return (
-    <section style={{ ...styles.compactCard, ...(accent ? { borderColor: accent } : null) }}>
-      <p style={styles.compactTitle}>{title}</p>
+    <section style={{ ...styles.metricCard, ...(accent ? { borderColor: accent } : null) }}>
+      <p style={styles.metricCardTitle}>{title}</p>
       {children}
     </section>
   );
@@ -112,6 +112,45 @@ function progressBar(value, color) {
   );
 }
 
+function getFuelAccentColor(fuelLevel) {
+  if (fuelLevel < 10) {
+    return "#ef4444";
+  }
+
+  if (fuelLevel < 30) {
+    return "#f97316";
+  }
+
+  if (fuelLevel <= 60) {
+    return "#eab308";
+  }
+
+  return "#22c55e";
+}
+
+function fuelProgressBar(fuelLevel) {
+  const normalizedFuel = Math.max(0, Math.min(Number(fuelLevel) || 0, 100));
+  const isCriticalFuel = normalizedFuel < 10;
+
+  return (
+    <div style={styles.progressTrack}>
+      <div
+        style={{
+          ...styles.progressFill,
+          width: `${normalizedFuel}%`,
+          background:
+            normalizedFuel > 60
+              ? "linear-gradient(90deg, #22c55e 0%, #16a34a 100%)"
+              : normalizedFuel >= 30
+                ? "linear-gradient(90deg, #fde047 0%, #eab308 100%)"
+                : "linear-gradient(90deg, #fb7185 0%, #dc2626 100%)",
+          ...(isCriticalFuel ? styles.criticalFuelFill : null),
+        }}
+      />
+    </div>
+  );
+}
+
 export default function Dashboard({
   connectionStatus,
   data,
@@ -129,7 +168,7 @@ export default function Dashboard({
   const activeData = isReplayMode ? replayFrame : data;
   const chartData = useMemo(() => {
     const source = isReplayMode ? replayData : history;
-    return source.slice(-24);
+    return source.slice(-60);
   }, [history, isReplayMode, replayData]);
 
   if (!activeData) {
@@ -174,6 +213,15 @@ export default function Dashboard({
 
   return (
     <section style={styles.page}>
+      <style>
+        {`
+          @keyframes fuelCriticalPulse {
+            0% { opacity: 0.78; box-shadow: 0 0 8px rgba(239, 68, 68, 0.35); }
+            50% { opacity: 1; box-shadow: 0 0 16px rgba(239, 68, 68, 0.7); }
+            100% { opacity: 0.78; box-shadow: 0 0 8px rgba(239, 68, 68, 0.35); }
+          }
+        `}
+      </style>
       <div style={styles.shell}>
         <header style={styles.topBar}>
           <div>
@@ -187,34 +235,39 @@ export default function Dashboard({
           </div>
         </header>
 
-        <main style={styles.layout}>
-          <section style={styles.topRow}>
-            <div style={styles.panelBox}>
-              <LoadControl
-                eventsPerSecond={eventsPerSecond}
-                mode={mode}
-                modeLoading={modeLoading}
-                onModeRequest={(nextMode) => {
-                  setModeLoading(true);
-                  setMode(nextMode);
-                }}
-                onModeResolved={(nextMode) => {
-                  setMode(nextMode);
-                  setModeLoading(false);
-                }}
-                totalMessages={totalMessages}
-              />
-            </div>
-            <div style={styles.healthBox}>
-              <HealthIndex health={health} status={status || statusCode} />
-            </div>
-            <div style={styles.panelBox}>
-              <SystemStatus systemStatus={translatedSystemStatus} />
-            </div>
-          </section>
+        <main style={styles.dashboardGrid}>
+          <div style={styles.gridCell}>
+            <LoadControl
+              eventsPerSecond={eventsPerSecond}
+              mode={mode}
+              modeLoading={modeLoading}
+              onModeRequest={(nextMode) => {
+                setModeLoading(true);
+                setMode(nextMode);
+              }}
+              onModeResolved={(nextMode) => {
+                setMode(nextMode);
+                setModeLoading(false);
+              }}
+              totalMessages={totalMessages}
+            />
+          </div>
 
-          <section style={styles.middleRow}>
-            <div style={styles.telemetryColumn}>
+          <div style={styles.gridCell}>
+            <section style={styles.healthPanel}>
+              <HealthIndex health={health} status={status || statusCode} />
+              <div style={styles.healthFactorsWrap}>
+                <HealthFactors factors={factors} />
+              </div>
+            </section>
+          </div>
+
+          <div style={styles.gridCell}>
+            <SystemStatus systemStatus={translatedSystemStatus} />
+          </div>
+
+          <div style={styles.gridCell}>
+            <section style={styles.telemetryColumn}>
               {card(
                 "СКОРОСТЬ",
                 <>
@@ -226,8 +279,13 @@ export default function Dashboard({
               {card(
                 "ТОПЛИВО",
                 <>
-                  {metricRow("Уровень", fuelLevel, "%", fuelLevel < 20 ? "#ef4444" : fuelLevel < 40 ? "#f59e0b" : "#22c55e")}
-                  {progressBar(fuelLevel, "linear-gradient(90deg, #22c55e 0%, #f59e0b 70%, #ef4444 100%)")}
+                  {metricRow(
+                    "Уровень",
+                    fuelLevel,
+                    "%",
+                    getFuelAccentColor(fuelLevel)
+                  )}
+                  {fuelProgressBar(fuelLevel)}
                   {metricRow("Напряжение", voltage, "В")}
                 </>,
                 "rgba(34, 197, 94, 0.34)"
@@ -236,14 +294,24 @@ export default function Dashboard({
                 "ДАВЛЕНИЕ",
                 <>
                   {metricRow("Тормоз", brakePressure, "бар", brakePressure < 4 ? "#ef4444" : "#f8fafc")}
-                  {metricRow("Масло", oilPressure, "бар", oilPressure < 2 ? "#ef4444" : oilPressure < 3 ? "#f59e0b" : "#f8fafc")}
+                  {metricRow(
+                    "Масло",
+                    oilPressure,
+                    "бар",
+                    oilPressure < 2 ? "#ef4444" : oilPressure < 3 ? "#f59e0b" : "#f8fafc"
+                  )}
                 </>,
                 "rgba(249, 115, 22, 0.34)"
               )}
               {card(
                 "ТЕМПЕРАТУРА",
                 <>
-                  {metricRow("Двигатель", engineTemp, "°C", engineTemp > 100 ? "#ef4444" : engineTemp >= 85 ? "#f59e0b" : "#f8fafc")}
+                  {metricRow(
+                    "Двигатель",
+                    engineTemp,
+                    "°C",
+                    engineTemp > 100 ? "#ef4444" : engineTemp >= 85 ? "#f59e0b" : "#f8fafc"
+                  )}
                   {metricRow("Охлаждение", coolantTemp, "°C")}
                   {metricRow("Масло", oilTemp, "°C")}
                 </>,
@@ -256,13 +324,14 @@ export default function Dashboard({
                   {metricRow("Напряжение", voltage, "В")}
                   {metricRow("Обороты", rpm, "об/мин")}
                 </>,
-                "rgba(168, 85, 247, 0.3)"
+                "rgba(59, 130, 246, 0.34)"
               )}
-            </div>
+            </section>
+          </div>
 
-            <div style={styles.centerColumn}>
+          <div style={styles.gridCell}>
+            <section style={styles.centerColumn}>
               <MiniMap speed={speed} timestamp={timestamp} />
-              <HealthFactors factors={factors} />
               <Replay
                 onReplayDataChange={setReplayData}
                 onReplayFrameChange={setReplayFrame}
@@ -289,75 +358,84 @@ export default function Dashboard({
                   <strong style={styles.signalValue}>{status || statusCode || "Норма"}</strong>
                 </div>
               </div>
-            </div>
+            </section>
+          </div>
 
-            <div style={styles.rightColumn}>
-              <Alerts alertGroups={translatedAlerts} />
-              <Recommendations recommendations={recommendations} />
-            </div>
-          </section>
+          <div style={styles.gridCell}>
+            <section style={styles.sideColumn}>
+              <div style={styles.sidePanel}>
+                <Alerts alertGroups={translatedAlerts} />
+              </div>
+              <div style={styles.sidePanel}>
+                <Recommendations recommendations={recommendations} />
+              </div>
+            </section>
+          </div>
 
-          <section style={styles.bottomRow}>
-            <div style={styles.bottomCharts}>
+          <div style={{ ...styles.gridCell, gridColumn: "1 / -1" }}>
+            <div style={styles.trendsPanel}>
               <Charts compact data={chartData} />
             </div>
-            <div style={styles.bottomReplay}>
-              <EventLog events={events} />
-            </div>
-          </section>
+          </div>
+
+          <div style={{ ...styles.gridCell, gridColumn: "1 / -1" }}>
+            <EventLog events={events} />
+          </div>
         </main>
       </div>
     </section>
   );
 }
 
+const surface = {
+  background: "linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(10, 15, 27, 0.98) 100%)",
+  border: "1px solid rgba(148, 163, 184, 0.16)",
+  borderRadius: "18px",
+  boxShadow: "0 18px 40px rgba(2, 6, 23, 0.32)",
+};
+
 const styles = {
   page: {
     minHeight: "100vh",
     width: "100%",
-    overflowX: "hidden",
-    overflowY: "auto",
-    background: "radial-gradient(circle at top, #1e293b 0%, #0f172a 48%, #020617 100%)",
+    background:
+      "radial-gradient(circle at top, rgba(30, 41, 59, 0.9) 0%, rgba(8, 15, 28, 0.98) 46%, rgba(2, 6, 23, 1) 100%)",
     color: "#f8fafc",
     fontFamily: '"Segoe UI", sans-serif',
+    overflowX: "hidden",
     boxSizing: "border-box",
   },
   shell: {
     maxWidth: "1520px",
     width: "100%",
-    minHeight: "100vh",
     margin: "0 auto",
-    padding: "12px",
-    display: "grid",
-    gridTemplateRows: "auto auto",
-    gap: "12px",
+    padding: "16px",
     boxSizing: "border-box",
-    overflow: "visible",
   },
   emptyState: {
-    height: "100vh",
-    overflow: "hidden",
+    minHeight: "100vh",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
     padding: "24px",
-    background: "radial-gradient(circle at top, #1e293b 0%, #0f172a 48%, #020617 100%)",
+    background:
+      "radial-gradient(circle at top, rgba(30, 41, 59, 0.9) 0%, rgba(8, 15, 28, 0.98) 46%, rgba(2, 6, 23, 1) 100%)",
     color: "#f8fafc",
     fontFamily: '"Segoe UI", sans-serif',
+    boxSizing: "border-box",
   },
   topBar: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: "12px",
-    minHeight: "48px",
-    maxWidth: "100%",
-    overflow: "hidden",
+    gap: "16px",
+    marginBottom: "16px",
+    flexWrap: "wrap",
   },
   kicker: {
     margin: "0 0 4px",
     color: "#64748b",
-    letterSpacing: "0.18em",
+    letterSpacing: "0.2em",
     fontSize: "0.74rem",
   },
   title: {
@@ -365,18 +443,13 @@ const styles = {
     fontSize: "2rem",
     lineHeight: 1,
     letterSpacing: "0.08em",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
   },
   topRight: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    flexWrap: "wrap",
     justifyContent: "flex-end",
-    maxWidth: "100%",
-    overflow: "hidden",
+    flexWrap: "wrap",
+    gap: "10px",
   },
   emptyText: {
     margin: 0,
@@ -384,199 +457,147 @@ const styles = {
     fontSize: "1.1rem",
     letterSpacing: "0.08em",
   },
-  layout: {
-    minHeight: 0,
+  dashboardGrid: {
     display: "grid",
-    gridTemplateRows: "auto auto auto",
-    gap: "12px",
-    maxWidth: "100%",
-    overflow: "visible",
+    gridTemplateColumns: "1fr 2fr 1fr",
+    gridTemplateRows: "auto auto 180px auto",
+    gap: "16px",
+    alignItems: "stretch",
   },
-  topRow: {
+  gridCell: {
+    minWidth: 0,
     minHeight: 0,
+    display: "flex",
+  },
+  healthPanel: {
+    ...surface,
+    width: "100%",
+    padding: "16px",
     display: "grid",
-    gridTemplateColumns: "minmax(260px, 1fr) minmax(340px, 1.1fr) minmax(260px, 1fr)",
-    gap: "12px",
-    maxWidth: "100%",
-    overflow: "visible",
-  },
-  middleRow: {
-    minHeight: 0,
-    display: "grid",
-    gridTemplateColumns: "minmax(250px, 0.95fr) minmax(340px, 1.15fr) minmax(300px, 1fr)",
-    gap: "12px",
-    maxWidth: "100%",
-    alignItems: "start",
-    overflow: "visible",
-  },
-  bottomRow: {
-    minHeight: 0,
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 1.65fr) minmax(300px, 0.95fr)",
-    gap: "12px",
-    maxWidth: "100%",
-    overflow: "visible",
-  },
-  bottomCharts: {
-    minHeight: 0,
-    borderRadius: "22px",
-    background: "rgba(15, 23, 42, 0.72)",
-    border: "1px solid rgba(148, 163, 184, 0.12)",
-    padding: "8px 10px",
-    overflow: "visible",
+    gridTemplateRows: "minmax(0, 1fr) auto",
+    gap: "16px",
+    minHeight: "100%",
     boxSizing: "border-box",
   },
-  bottomReplay: {
+  healthFactorsWrap: {
     minHeight: 0,
-    overflow: "hidden",
-    display: "grid",
-    gap: "12px",
-    alignContent: "start",
-  },
-  panelBox: {
-    minHeight: 0,
-    maxWidth: "100%",
-    overflow: "hidden",
-  },
-  healthBox: {
-    minHeight: 0,
-    display: "grid",
-    alignItems: "center",
-    maxWidth: "100%",
-    overflow: "hidden",
   },
   telemetryColumn: {
-    minHeight: 0,
+    width: "100%",
     display: "grid",
-    gridTemplateRows: "repeat(5, minmax(82px, auto))",
-    gap: "8px",
-    maxWidth: "100%",
-    overflow: "visible",
+    gridTemplateRows: "repeat(5, minmax(0, 1fr))",
+    gap: "16px",
+    minHeight: "100%",
   },
   centerColumn: {
-    minHeight: 0,
+    width: "100%",
     display: "grid",
-    gridTemplateRows: "minmax(220px, auto) auto auto auto",
-    gap: "8px",
-    maxWidth: "100%",
-    overflow: "visible",
+    gridTemplateRows: "minmax(280px, 1fr) auto auto",
+    gap: "16px",
+    minHeight: "100%",
   },
-  rightColumn: {
-    minHeight: 0,
+  sideColumn: {
+    width: "100%",
     display: "grid",
-    gridTemplateRows: "minmax(220px, auto) auto",
-    gap: "8px",
-    overflow: "visible",
-    maxWidth: "100%",
+    gridTemplateRows: "minmax(0, 1fr) minmax(0, 1fr)",
+    gap: "16px",
+    minHeight: "100%",
   },
-  compactCard: {
+  sidePanel: {
+    minWidth: 0,
     minHeight: 0,
-    height: "100%",
-    maxWidth: "100%",
-    padding: "8px 10px",
-    borderRadius: "16px",
-    background: "linear-gradient(180deg, rgba(17,24,39,0.98) 0%, rgba(15,23,42,0.95) 100%)",
-    border: "1px solid rgba(148, 163, 184, 0.14)",
-    boxShadow: "0 14px 30px rgba(2, 6, 23, 0.26)",
-    overflow: "visible",
+    display: "flex",
+  },
+  trendsPanel: {
+    ...surface,
+    width: "100%",
+    height: "180px",
+    padding: "12px 14px",
+    overflow: "hidden",
     boxSizing: "border-box",
+  },
+  metricCard: {
+    ...surface,
+    width: "100%",
+    padding: "14px 16px",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
+    boxSizing: "border-box",
+    overflow: "hidden",
   },
-  compactTitle: {
-    margin: "0 0 6px",
+  metricCardTitle: {
+    margin: "0 0 8px",
     color: "#94a3b8",
     letterSpacing: "0.12em",
-    fontSize: "0.7rem",
+    fontSize: "0.72rem",
     textTransform: "uppercase",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  },
-  bigValue: {
-    marginBottom: "6px",
-    fontSize: "1.8rem",
-    fontWeight: 800,
-    lineHeight: 1,
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  },
-  bigUnit: {
-    fontSize: "0.85rem",
-    color: "#94a3b8",
   },
   metricRow: {
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
-    gap: "10px",
-    marginBottom: "4px",
-    minWidth: 0,
+    gap: "12px",
+    marginBottom: "6px",
   },
   metricLabel: {
     color: "#cbd5e1",
-    fontSize: "0.8rem",
+    fontSize: "0.82rem",
     fontWeight: 600,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    minWidth: 0,
   },
   metricValue: {
-    fontSize: "0.92rem",
+    fontSize: "1.05rem",
     fontWeight: 800,
     whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
   },
   metricUnit: {
-    fontSize: "0.66rem",
     color: "#94a3b8",
+    fontSize: "0.76rem",
+    fontWeight: 600,
   },
   progressTrack: {
     width: "100%",
-    height: "9px",
+    height: "8px",
     borderRadius: "999px",
-    backgroundColor: "rgba(51, 65, 85, 0.9)",
+    backgroundColor: "rgba(51, 65, 85, 0.8)",
     overflow: "hidden",
-    marginBottom: "6px",
+    marginTop: "8px",
   },
   progressFill: {
     height: "100%",
     borderRadius: "999px",
   },
+  criticalFuelFill: {
+    animation: "fuelCriticalPulse 1.2s infinite",
+    boxShadow: "0 0 14px rgba(239, 68, 68, 0.55)",
+  },
   signalStrip: {
+    ...surface,
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: "8px",
-    maxWidth: "100%",
-  },
-  signalCell: {
-    padding: "8px 10px",
-    borderRadius: "14px",
-    backgroundColor: "rgba(15, 23, 42, 0.78)",
-    border: "1px solid rgba(148, 163, 184, 0.12)",
+    gap: "12px",
+    width: "100%",
+    padding: "14px 16px",
     boxSizing: "border-box",
     overflow: "hidden",
   },
+  signalCell: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+    minWidth: 0,
+  },
   signalLabel: {
-    display: "block",
-    marginBottom: "6px",
     color: "#64748b",
-    fontSize: "0.66rem",
-    letterSpacing: "0.12em",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
+    fontSize: "0.72rem",
+    letterSpacing: "0.14em",
   },
   signalValue: {
     color: "#f8fafc",
-    fontSize: "0.86rem",
-    letterSpacing: "0.03em",
-    whiteSpace: "nowrap",
+    fontSize: "0.94rem",
+    letterSpacing: "0.04em",
     overflow: "hidden",
     textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
 };

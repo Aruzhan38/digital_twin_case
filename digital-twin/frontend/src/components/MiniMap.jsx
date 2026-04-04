@@ -1,10 +1,43 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 const POSITION_FACTOR = 0.035;
-const SPEED_LIMIT = 80;
+const SPEED_LIMIT = 40;
+const MAP_DISTANCE = 100;
+const START_X = 24;
+const END_X = 376;
+const TRACK_Y = 84;
+const VIEWBOX_WIDTH = 400;
+const VIEWBOX_HEIGHT = 160;
+const DANGER_START = 58;
+const DANGER_END = 72;
+const STATION_DISTANCE = 3.2;
+const SCALE_MARKERS = [0, 22, 40, 75, 100];
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function positionToX(position) {
+  const progress = clamp(position, 0, MAP_DISTANCE) / MAP_DISTANCE;
+  return START_X + progress * (END_X - START_X);
+}
+
+function getTrackY(position) {
+  if (position >= 22 && position <= 40) {
+    const loopProgress = (position - 22) / 18;
+    return TRACK_Y - Math.sin(loopProgress * Math.PI) * 20;
+  }
+
+  if (position >= 40 && position <= 58) {
+    const loopProgress = (position - 40) / 18;
+    return TRACK_Y + Math.sin(loopProgress * Math.PI) * 20;
+  }
+
+  return TRACK_Y;
+}
 
 export default function MiniMap({ speed, timestamp }) {
-  const [position, setPosition] = useState(0);
+  const [position, setPosition] = useState(18);
   const numericSpeed = Number(speed || 0);
   const isOverspeed = numericSpeed > SPEED_LIMIT;
 
@@ -14,186 +47,320 @@ export default function MiniMap({ speed, timestamp }) {
     }
 
     setPosition((currentPosition) => {
-      const nextPosition = currentPosition + Number(speed || 0) * POSITION_FACTOR;
-      return nextPosition >= 100 ? nextPosition % 100 : nextPosition;
+      const nextPosition = currentPosition + numericSpeed * POSITION_FACTOR;
+      return nextPosition >= MAP_DISTANCE ? nextPosition % MAP_DISTANCE : nextPosition;
     });
-  }, [speed, timestamp]);
+  }, [numericSpeed, timestamp]);
+
+  const clampedPosition = clamp(position, 0, MAP_DISTANCE);
+  const trainX = useMemo(() => positionToX(clampedPosition), [clampedPosition]);
+  const trainY = useMemo(() => getTrackY(clampedPosition), [clampedPosition]);
+  const inDangerZone = clampedPosition >= DANGER_START && clampedPosition <= DANGER_END;
+  const stationX = Math.max(START_X + 18, Math.min(trainX - 26, END_X - 110));
 
   return (
-    <section style={{ ...styles.card, ...(isOverspeed ? styles.warningCard : null) }}>
+    <section style={{ ...styles.card, ...(isOverspeed || inDangerZone ? styles.warningCard : null) }}>
       <div style={styles.header}>
         <div>
-          <h2 style={styles.title}>КАРТА УЧАСТКА ПУТИ</h2>
-          <p style={styles.subtitle}>Текущее движение поезда</p>
+          <h2 style={styles.title}>СХЕМА ПУТИ</h2>
+          <p style={styles.subtitle}>Оперативная железнодорожная схема участка</p>
         </div>
-        <div style={styles.speedWrap}>
-          <p style={styles.speedText}>{speed ?? "--"} км/ч</p>
-          <p style={{ ...styles.limitText, ...(isOverspeed ? styles.limitDanger : null) }}>
-            Ограничение: {SPEED_LIMIT} км/ч
-          </p>
+
+        <div style={{ ...styles.limitCard, ...(isOverspeed ? styles.limitCardWarning : null) }}>
+          <span style={styles.limitLabel}>ОГРАНИЧЕНИЕ</span>
+          <strong style={styles.limitValue}>40 км/ч</strong>
         </div>
       </div>
 
-      <div style={styles.labels}>
-        <span>СТАРТ</span>
-        <span>ТЕКУЩЕЕ ПОЛОЖЕНИЕ</span>
-        <span>КОНЕЦ</span>
+      <div style={styles.mapFrame}>
+        <svg
+          width="100%"
+          height="160"
+          viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
+          style={styles.scheme}
+          role="img"
+          aria-label="Railway track map"
+        >
+          <defs>
+            <linearGradient id="trackGlow" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#94a3b8" />
+              <stop offset="100%" stopColor="#d1d5db" />
+            </linearGradient>
+            <linearGradient id="dangerFill" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="rgba(248, 113, 113, 0.18)" />
+              <stop offset="100%" stopColor="rgba(239, 68, 68, 0.32)" />
+            </linearGradient>
+          </defs>
+
+          <rect x="0" y="0" width={VIEWBOX_WIDTH} height={VIEWBOX_HEIGHT} fill="transparent" />
+
+          <rect
+            x={positionToX(DANGER_START)}
+            y="44"
+            width={positionToX(DANGER_END) - positionToX(DANGER_START)}
+            height="64"
+            rx="8"
+            fill="url(#dangerFill)"
+          />
+
+          <line
+            x1={positionToX(DANGER_START)}
+            y1="36"
+            x2={positionToX(DANGER_START)}
+            y2="126"
+            stroke="#ef4444"
+            strokeWidth="2"
+            strokeDasharray="4 4"
+          />
+          <line
+            x1={positionToX(DANGER_END)}
+            y1="36"
+            x2={positionToX(DANGER_END)}
+            y2="126"
+            stroke="#ef4444"
+            strokeWidth="2"
+            strokeDasharray="4 4"
+          />
+
+          <path
+            d={`M ${START_X} ${TRACK_Y} H ${END_X}`}
+            stroke="url(#trackGlow)"
+            strokeWidth="3"
+            strokeLinecap="round"
+            fill="none"
+          />
+
+          <path
+            d={`M ${positionToX(22)} ${TRACK_Y} C ${positionToX(26)} 48, ${positionToX(36)} 48, ${positionToX(40)} ${TRACK_Y}`}
+            stroke="#cbd5e1"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <path
+            d={`M ${positionToX(22)} ${TRACK_Y} C ${positionToX(26)} 120, ${positionToX(36)} 120, ${positionToX(40)} ${TRACK_Y}`}
+            stroke="#94a3b8"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <path
+            d={`M ${positionToX(40)} ${TRACK_Y} C ${positionToX(44)} 48, ${positionToX(54)} 48, ${positionToX(58)} ${TRACK_Y}`}
+            stroke="#cbd5e1"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <path
+            d={`M ${positionToX(40)} ${TRACK_Y} C ${positionToX(44)} 120, ${positionToX(54)} 120, ${positionToX(58)} ${TRACK_Y}`}
+            stroke="#94a3b8"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            fill="none"
+          />
+
+          <line
+            x1={positionToX(DANGER_START)}
+            y1={TRACK_Y}
+            x2={positionToX(DANGER_END)}
+            y2={TRACK_Y}
+            stroke="#ef4444"
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+
+          <text x={stationX} y="26" style={svgStyles.stationTitle}>СТ. ЗАВОДСКАЯ</text>
+          <text x={stationX} y="40" style={svgStyles.stationMeta}>{STATION_DISTANCE} км</text>
+          <line
+            x1={stationX + 28}
+            y1="46"
+            x2={stationX + 28}
+            y2={TRACK_Y - 8}
+            stroke="#60a5fa"
+            strokeWidth="1.5"
+            strokeDasharray="3 3"
+          />
+
+          <text x={positionToX(DANGER_START) + 6} y="28" style={svgStyles.dangerText}>⚠ ОПАСНАЯ ЗОНА</text>
+
+          {SCALE_MARKERS.map((marker) => {
+            const x = positionToX(marker);
+            return (
+              <g key={marker}>
+                <line x1={x} y1="132" x2={x} y2="140" stroke="#94a3b8" strokeWidth="1.5" />
+                <text x={x} y="153" textAnchor={marker === 0 ? "start" : marker === 100 ? "end" : "middle"} style={svgStyles.scaleLabel}>
+                  {marker === 100 ? "100 км" : marker}
+                </text>
+              </g>
+            );
+          })}
+
+          <g style={styles.trainGroup}>
+            <circle cx={trainX} cy={trainY} r="11" fill="rgba(59, 130, 246, 0.16)" />
+            <circle cx={trainX} cy={trainY} r="6" fill="#3B82F6" stroke="#dbeafe" strokeWidth="2" />
+          </g>
+        </svg>
       </div>
 
-      <div style={styles.trackWrap}>
-        <div style={styles.speedLimitLow}>40</div>
-        <div style={styles.track}>
-          <div style={styles.speedZone} />
-          <div style={styles.warningZone}>
-            <span style={styles.warningIcon}>⚠</span>
+      <div style={styles.footer}>
+        <div style={styles.statusRow}>
+          <div style={styles.metricCard}>
+            <span style={styles.metricLabel}>ПОЗИЦИЯ</span>
+            <strong style={styles.metricValue}>{clampedPosition.toFixed(1)} км</strong>
+          </div>
+          <div style={styles.metricCard}>
+            <span style={styles.metricLabel}>СКОРОСТЬ</span>
+            <strong style={{ ...styles.metricValue, color: isOverspeed ? "#fca5a5" : "#7dd3fc" }}>
+              {numericSpeed || 0} км/ч
+            </strong>
+          </div>
+          <div style={styles.metricCard}>
+            <span style={styles.metricLabel}>УЧАСТОК</span>
+            <strong style={styles.metricValue}>{inDangerZone ? "КОНТРОЛЬ" : "НОРМА"}</strong>
           </div>
         </div>
-        <div style={styles.speedLimitHigh}>90</div>
-        <div style={{ ...styles.train, left: `${position}%` }} />
+
+        {isOverspeed ? <p style={styles.warningText}>Превышение скорости</p> : null}
       </div>
-      {isOverspeed ? <p style={styles.warningText}>Превышение скорости</p> : null}
     </section>
   );
 }
 
+const svgStyles = {
+  stationTitle: {
+    fill: "#e5eefc",
+    fontSize: "11px",
+    letterSpacing: "0.14em",
+    fontWeight: 700,
+  },
+  stationMeta: {
+    fill: "#93c5fd",
+    fontSize: "10px",
+    letterSpacing: "0.08em",
+    fontWeight: 600,
+  },
+  dangerText: {
+    fill: "#fca5a5",
+    fontSize: "10px",
+    letterSpacing: "0.12em",
+    fontWeight: 700,
+  },
+  scaleLabel: {
+    fill: "#94a3b8",
+    fontSize: "9px",
+    letterSpacing: "0.1em",
+    fontWeight: 600,
+  },
+};
+
 const styles = {
   card: {
-    height: "100%",
+    width: "100%",
     minHeight: 0,
-    maxWidth: "100%",
-    padding: "12px",
-    borderRadius: "20px",
-    backgroundColor: "#172033",
-    border: "1px solid rgba(148, 163, 184, 0.15)",
-    boxShadow: "0 16px 40px rgba(2, 6, 23, 0.28)",
+    padding: "16px",
+    borderRadius: "18px",
+    background: "linear-gradient(180deg, rgba(12, 19, 31, 0.98) 0%, rgba(8, 13, 24, 1) 100%)",
+    border: "1px solid rgba(148, 163, 184, 0.16)",
+    boxShadow: "0 18px 40px rgba(2, 6, 23, 0.34)",
     boxSizing: "border-box",
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
-    justifyContent: "space-between",
+    gap: "14px",
   },
   warningCard: {
-    border: "1px solid rgba(239, 68, 68, 0.28)",
-    boxShadow: "0 0 24px rgba(239, 68, 68, 0.18)",
+    border: "1px solid rgba(239, 68, 68, 0.32)",
+    boxShadow: "0 18px 42px rgba(127, 29, 29, 0.26)",
   },
   header: {
     display: "flex",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    alignItems: "center",
     gap: "12px",
     flexWrap: "wrap",
-    marginBottom: "10px",
   },
   title: {
     margin: 0,
-    fontSize: "0.9rem",
-    letterSpacing: "0.08em",
     color: "#f8fafc",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
+    fontSize: "0.95rem",
+    letterSpacing: "0.14em",
   },
   subtitle: {
     margin: "6px 0 0",
     color: "#94a3b8",
-    fontSize: "0.76rem",
+    fontSize: "0.78rem",
+  },
+  limitCard: {
+    minWidth: "126px",
+    padding: "10px 12px",
+    borderRadius: "12px",
+    backgroundColor: "rgba(15, 23, 42, 0.88)",
+    border: "1px solid rgba(239, 68, 68, 0.24)",
+    display: "grid",
+    gap: "4px",
+  },
+  limitCardWarning: {
+    boxShadow: "0 0 18px rgba(239, 68, 68, 0.2)",
+  },
+  limitLabel: {
+    color: "#fca5a5",
+    fontSize: "0.66rem",
+    letterSpacing: "0.14em",
+  },
+  limitValue: {
+    color: "#fecaca",
+    fontSize: "1rem",
+    fontWeight: 800,
+  },
+  mapFrame: {
+    width: "100%",
+    borderRadius: "16px",
+    background:
+      "linear-gradient(180deg, rgba(2, 6, 23, 0.94) 0%, rgba(15, 23, 42, 0.72) 100%), repeating-linear-gradient(0deg, rgba(148, 163, 184, 0.04) 0, rgba(148, 163, 184, 0.04) 1px, transparent 1px, transparent 22px)",
+    border: "1px solid rgba(71, 85, 105, 0.54)",
+    overflow: "hidden",
+  },
+  scheme: {
+    display: "block",
+  },
+  trainGroup: {
+    transition: "all 0.7s ease",
+  },
+  footer: {
+    display: "grid",
+    gap: "10px",
+  },
+  statusRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "10px",
+  },
+  metricCard: {
+    padding: "10px 12px",
+    borderRadius: "12px",
+    backgroundColor: "rgba(15, 23, 42, 0.82)",
+    display: "grid",
+    gap: "4px",
+    minWidth: 0,
+  },
+  metricLabel: {
+    color: "#64748b",
+    fontSize: "0.66rem",
+    letterSpacing: "0.14em",
+  },
+  metricValue: {
+    color: "#e2e8f0",
+    fontSize: "0.86rem",
+    letterSpacing: "0.06em",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
-  speedText: {
-    margin: 0,
-    color: "#38bdf8",
-    fontWeight: 700,
-    fontSize: "0.96rem",
-    whiteSpace: "nowrap",
-  },
-  speedWrap: {
-    display: "grid",
-    justifyItems: "end",
-    gap: "2px",
-  },
-  limitText: {
-    margin: 0,
-    color: "#94a3b8",
-    fontSize: "0.72rem",
-    whiteSpace: "nowrap",
-  },
-  limitDanger: {
-    color: "#f87171",
-  },
-  labels: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "12px",
-    marginBottom: "8px",
-    color: "#64748b",
-    fontSize: "0.68rem",
-    letterSpacing: "0.06em",
-    overflow: "hidden",
-  },
-  trackWrap: {
-    position: "relative",
-    height: "36px",
-    display: "flex",
-    alignItems: "center",
-  },
-  track: {
-    flex: 1,
-    height: "10px",
-    borderRadius: "999px",
-    background: "linear-gradient(90deg, #334155 0%, #64748b 100%)",
-    position: "relative",
-    overflow: "hidden",
-  },
-  speedZone: {
-    position: "absolute",
-    inset: 0,
-    width: "22%",
-    background: "rgba(248, 250, 252, 0.18)",
-  },
-  warningZone: {
-    position: "absolute",
-    left: "56%",
-    width: "12%",
-    top: 0,
-    bottom: 0,
-    background: "rgba(239, 68, 68, 0.32)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  warningIcon: {
-    fontSize: "0.78rem",
-    lineHeight: 1,
-  },
-  speedLimitLow: {
-    marginRight: "10px",
-    color: "#94a3b8",
-    fontSize: "0.78rem",
-    fontWeight: 700,
-  },
-  speedLimitHigh: {
-    marginLeft: "10px",
-    color: "#94a3b8",
-    fontSize: "0.78rem",
-    fontWeight: 700,
-  },
-  train: {
-    position: "absolute",
-    top: "50%",
-    width: "16px",
-    height: "16px",
-    borderRadius: "999px",
-    backgroundColor: "#38bdf8",
-    border: "3px solid #0f172a",
-    boxShadow: "0 0 0 6px rgba(56, 189, 248, 0.16), 0 6px 16px rgba(14, 165, 233, 0.35)",
-    transform: "translate(-50%, -50%)",
-  },
   warningText: {
-    margin: "8px 0 0",
-    color: "#f87171",
+    margin: 0,
+    color: "#fca5a5",
     fontSize: "0.8rem",
     fontWeight: 700,
+    letterSpacing: "0.04em",
   },
 };

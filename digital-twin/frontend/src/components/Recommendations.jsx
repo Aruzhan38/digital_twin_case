@@ -24,13 +24,19 @@ export default function Recommendations({ recommendations }) {
 
 const styles = {
   card: {
-    minHeight: "120px",
-    padding: "12px",
-    borderRadius: "16px",
-    backgroundColor: "#172033",
-    border: "1px solid rgba(148, 163, 184, 0.15)",
+    width: "100%",
+    height: "100%",
+    minHeight: 0,
+    padding: "16px",
+    borderRadius: "18px",
+    background: "linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(10, 15, 27, 0.98) 100%)",
+    border: "1px solid rgba(148, 163, 184, 0.16)",
+    boxShadow: "0 18px 40px rgba(2, 6, 23, 0.32)",
     overflow: "hidden",
     boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
   },
   title: {
     margin: "0 0 10px",

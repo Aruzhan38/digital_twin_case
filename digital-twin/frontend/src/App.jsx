@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Dashboard from "./components/Dashboard.jsx";
 import { connectWebSocket } from "./services/websocket";
 
-const HISTORY_LIMIT = 120;
+const HISTORY_LIMIT = 300;
 
 function normalizePayload(payload) {
   if (!payload) {
@@ -32,7 +32,6 @@ export default function App() {
   const [latencyMs, setLatencyMs] = useState(0);
   const [totalMessages, setTotalMessages] = useState(0);
   const messageCounterRef = useRef(0);
-  const lastReceiveTimestampRef = useRef(0);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -46,24 +45,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!data || !lastReceiveTimestampRef.current) {
-      return;
-    }
-
-    // Measure UI-side latency from message receipt until the next rendered frame.
-    const frameId = window.requestAnimationFrame(() => {
-      const measured = performance.now() - lastReceiveTimestampRef.current;
-      setLatencyMs(Math.max(1, Math.round(measured)));
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
-  }, [data]);
-
-  useEffect(() => {
     const socket = connectWebSocket(
-      (incomingPayload) => {
+      (incomingPayload, nextLatencyMs = 0) => {
         const normalizedFrame = normalizePayload(incomingPayload);
 
         if (!normalizedFrame) {
@@ -71,8 +54,8 @@ export default function App() {
         }
 
         messageCounterRef.current += 1;
-        lastReceiveTimestampRef.current = performance.now();
         setTotalMessages((count) => count + 1);
+        setLatencyMs(nextLatencyMs);
         setData(normalizedFrame);
         setHistory((currentHistory) => {
           const nextHistory = [...currentHistory, normalizedFrame];

@@ -34,13 +34,17 @@ export default function HealthFactors({ factors }) {
 
 const styles = {
   card: {
-    minHeight: "120px",
-    padding: "12px 14px",
+    minHeight: 0,
+    height: "100%",
+    padding: "14px 16px",
     borderRadius: "16px",
-    backgroundColor: "#172033",
-    border: "1px solid rgba(148, 163, 184, 0.15)",
+    backgroundColor: "rgba(15, 23, 42, 0.72)",
+    border: "1px solid rgba(148, 163, 184, 0.12)",
     overflow: "hidden",
     boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
   },
   title: {
     margin: "0 0 10px",

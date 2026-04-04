@@ -148,30 +148,36 @@ export default function Replay({
   return (
     <section style={{ ...styles.card, ...(replayActive ? styles.activeCard : null) }}>
       <div style={styles.header}>
-        <h2 style={styles.title}>ПОВТОР (REPLAY)</h2>
+        <div>
+          <h2 style={styles.title}>ПОВТОР МАРШРУТА</h2>
+          <p style={styles.subtitle}>История движения за последние 5 минут</p>
+        </div>
         <span style={{ ...styles.modeBadge, ...(replayActive ? styles.modeBadgeActive : null) }}>
           {replayActive ? "РЕЖИМ: ПОВТОР" : "РЕЖИМ: ОНЛАЙН"}
         </span>
       </div>
-      <div style={styles.actions}>
-        <button onClick={handleReplayMode} style={styles.primaryButton} disabled={loading}>
-          {loading ? "ЗАГРУЗКА..." : "ЗАГРУЗИТЬ"}
-        </button>
-        <button onClick={handleLiveMode} style={styles.secondaryButton}>
-          ЖИВОЙ
-        </button>
-      </div>
 
-      <div style={styles.actions}>
-        <button onClick={handlePlay} style={styles.secondaryButton} disabled={!replayActive || replayData.length === 0}>
-          ПУСК ▶
-        </button>
-        <button onClick={handlePause} style={styles.secondaryButton} disabled={!replayActive || replayData.length === 0 || !isPlaying}>
-          ПАУЗА ⏸
-        </button>
-        <button onClick={handleReset} style={styles.secondaryButton} disabled={!replayActive || replayData.length === 0}>
-          СБРОС ⏮
-        </button>
+      <div style={styles.controlsGrid}>
+        <div style={styles.actions}>
+          <button onClick={handleReplayMode} style={styles.primaryButton} disabled={loading}>
+            {loading ? "ЗАГРУЗКА..." : "ЗАГРУЗИТЬ"}
+          </button>
+          <button onClick={handleLiveMode} style={styles.secondaryButton}>
+            ЖИВОЙ
+          </button>
+        </div>
+
+        <div style={styles.actions}>
+          <button onClick={handlePlay} style={styles.secondaryButton} disabled={!replayActive || replayData.length === 0}>
+            ПУСК
+          </button>
+          <button onClick={handlePause} style={styles.secondaryButton} disabled={!replayActive || replayData.length === 0 || !isPlaying}>
+            ПАУЗА
+          </button>
+          <button onClick={handleReset} style={styles.secondaryButton} disabled={!replayActive || replayData.length === 0}>
+            СБРОС
+          </button>
+        </div>
       </div>
 
       {replayActive ? (
@@ -207,39 +213,42 @@ export default function Replay({
 
 const styles = {
   card: {
-    height: "100%",
+    width: "100%",
     minHeight: 0,
     maxWidth: "100%",
-    padding: "14px",
+    padding: "16px",
     borderRadius: "18px",
-    backgroundColor: "#172033",
-    border: "1px solid rgba(148, 163, 184, 0.15)",
+    background: "linear-gradient(180deg, rgba(14, 20, 34, 0.98) 0%, rgba(9, 14, 26, 0.98) 100%)",
+    border: "1px solid rgba(148, 163, 184, 0.16)",
+    boxShadow: "0 18px 40px rgba(2, 6, 23, 0.32)",
     boxSizing: "border-box",
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
+    gap: "12px",
   },
   activeCard: {
     border: "1px solid rgba(56, 189, 248, 0.35)",
-    boxShadow: "0 16px 32px rgba(37, 99, 235, 0.16)",
+    boxShadow: "0 18px 34px rgba(37, 99, 235, 0.16)",
   },
   header: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     gap: "10px",
-    marginBottom: "10px",
     flexWrap: "wrap",
   },
   title: {
     margin: 0,
-    fontSize: "0.9rem",
-    letterSpacing: "0.1em",
+    fontSize: "0.92rem",
+    letterSpacing: "0.14em",
     color: "#e2e8f0",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
+  },
+  subtitle: {
+    margin: "4px 0 0",
+    color: "#94a3b8",
+    fontSize: "0.76rem",
   },
   modeBadge: {
     padding: "6px 10px",
@@ -255,11 +264,14 @@ const styles = {
     backgroundColor: "rgba(37, 99, 235, 0.18)",
     color: "#93c5fd",
   },
+  controlsGrid: {
+    display: "grid",
+    gap: "10px",
+  },
   actions: {
     display: "flex",
     flexWrap: "wrap",
     gap: "8px",
-    marginBottom: "8px",
   },
   primaryButton: {
     border: "1px solid rgba(56, 189, 248, 0.35)",
@@ -280,7 +292,6 @@ const styles = {
     cursor: "pointer",
   },
   timeline: {
-    marginBottom: "8px",
     minHeight: 0,
     overflow: "hidden",
   },
@@ -300,7 +311,6 @@ const styles = {
   },
   replayBadge: {
     display: "inline-block",
-    margin: "0 0 8px",
     padding: "6px 12px",
     borderRadius: "999px",
     backgroundColor: "rgba(59, 130, 246, 0.15)",
