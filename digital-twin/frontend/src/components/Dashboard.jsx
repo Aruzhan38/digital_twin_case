@@ -175,7 +175,7 @@ function TopStatusStrip({ timestamp, isReplayMode, status, statusCode }) {
   return (
     <section style={styles.topInfoGroup}>
       <div style={styles.topStatusPill}>
-        <span style={styles.topStatusLabel}>ВРЕМЯ</span>
+        <span style={styles.topStatusLabel}>⏱ ВРЕМЯ</span>
         <strong style={styles.topStatusValue}>
           {new Date(timestamp).toLocaleTimeString([], {
             hour: "2-digit",
@@ -185,11 +185,11 @@ function TopStatusStrip({ timestamp, isReplayMode, status, statusCode }) {
         </strong>
       </div>
       <div style={styles.topStatusPill}>
-        <span style={styles.topStatusLabel}>РЕЖИМ</span>
+        <span style={styles.topStatusLabel}>⚙ РЕЖИМ</span>
         <strong style={styles.topStatusValue}>{isReplayMode ? "ПОВТОР" : "РЕАЛЬНОЕ ВРЕМЯ"}</strong>
       </div>
       <div style={styles.topStatusPill}>
-        <span style={styles.topStatusLabel}>СОСТОЯНИЕ</span>
+        <span style={styles.topStatusLabel}>📊 СОСТОЯНИЕ</span>
         <strong style={styles.topStatusValue}>{status || statusCode || "Норма"}</strong>
       </div>
     </section>
@@ -638,25 +638,28 @@ const styles = {
   },
   topStatusPill: {
     minWidth: 0,
-    minHeight: "84px",
+    minHeight: "80px",
     borderRadius: "20px",
-    padding: "18px 20px",
+    padding: "12px 16px",
     background: "linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(10, 15, 27, 0.98) 100%)",
     border: "1px solid rgba(148, 163, 184, 0.16)",
     boxShadow: "0 18px 40px rgba(2, 6, 23, 0.32)",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
-    gap: "6px",
+    alignItems: "flex-start",
+    gap: "4px",
   },
   topStatusLabel: {
     color: "#64748b",
-    fontSize: "0.68rem",
+    fontSize: "12px",
     letterSpacing: "0.14em",
+    opacity: 0.7,
   },
   topStatusValue: {
     color: "#f8fafc",
-    fontSize: "0.94rem",
+    fontSize: "20px",
+    fontWeight: 600,
     letterSpacing: "0.04em",
     overflow: "hidden",
     textOverflow: "ellipsis",
