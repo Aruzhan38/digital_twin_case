@@ -1,22 +1,6 @@
+import Alerts from "./Alerts.jsx";
+import Charts from "./Charts.jsx";
 import HealthIndex from "./HealthIndex.jsx";
-
-const statusColors = {
-  normal: "#1f9d55",
-  warning: "#d69e2e",
-  critical: "#e53e3e",
-};
-
-function getHealthColor(health) {
-  if (health >= 80) {
-    return "#1f9d55";
-  }
-
-  if (health >= 50) {
-    return "#d69e2e";
-  }
-
-  return "#e53e3e";
-}
 
 function renderList(items, emptyMessage, prefix) {
   if (!items || items.length === 0) {
@@ -30,7 +14,7 @@ function renderList(items, emptyMessage, prefix) {
   ));
 }
 
-export default function Dashboard({ data }) {
+export default function Dashboard({ data, history }) {
   if (!data) {
     return (
       <section style={styles.emptyState}>
@@ -75,17 +59,14 @@ export default function Dashboard({ data }) {
         </div>
       </div>
 
+      <Charts data={history} />
+
       <div style={styles.infoGrid}>
-        <div style={styles.infoCard}>
-          <h2 style={styles.infoTitle}>Alerts</h2>
-          <ul style={styles.list}>
-            {renderList(reasons, "No active alerts", "⚠️")}
-          </ul>
-        </div>
+        <Alerts reasons={reasons} />
         <div style={styles.infoCard}>
           <h2 style={styles.infoTitle}>Recommendations</h2>
           <ul style={styles.list}>
-            {renderList(recommendations, "No actions needed", "→")}
+            {renderList(recommendations, "No actions needed", "->")}
           </ul>
         </div>
       </div>
@@ -121,37 +102,6 @@ const styles = {
   emptyText: {
     margin: 0,
     fontSize: "1.1rem",
-  },
-  sectionLabel: {
-    margin: 0,
-    fontSize: "0.95rem",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    color: "#4a5568",
-  },
-  healthCard: {
-    maxWidth: "560px",
-    margin: "0 auto 24px",
-    padding: "28px",
-    borderRadius: "20px",
-    backgroundColor: "#ffffff",
-    boxShadow: "0 12px 30px rgba(15, 23, 42, 0.08)",
-    textAlign: "center",
-  },
-  healthValue: {
-    margin: "12px 0",
-    fontSize: "5rem",
-    fontWeight: 700,
-    lineHeight: 1,
-  },
-  statusBadge: {
-    display: "inline-block",
-    margin: 0,
-    padding: "8px 16px",
-    borderRadius: "999px",
-    color: "#ffffff",
-    textTransform: "capitalize",
-    fontWeight: 600,
   },
   telemetryGrid: {
     display: "grid",
