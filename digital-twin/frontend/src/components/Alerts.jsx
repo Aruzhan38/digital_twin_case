@@ -2,21 +2,21 @@ import React from "react";
 
 const SECTION_CONFIG = {
   critical: {
-    label: "Critical",
-    accent: "#b91c1c",
-    background: "#fee2e2",
+    label: "КРИТИЧНО",
+    accent: "#ef4444",
+    background: "rgba(127, 29, 29, 0.42)",
     icon: "!",
   },
   warning: {
-    label: "Warning",
-    accent: "#b45309",
-    background: "#fef3c7",
+    label: "ВНИМАНИЕ",
+    accent: "#f59e0b",
+    background: "rgba(120, 53, 15, 0.38)",
     icon: "!",
   },
   normal: {
-    label: "Normal",
-    accent: "#15803d",
-    background: "#dcfce7",
+    label: "НОРМА",
+    accent: "#22c55e",
+    background: "rgba(20, 83, 45, 0.36)",
     icon: "OK",
   },
 };
@@ -30,13 +30,8 @@ export default function Alerts({ alertGroups }) {
     criticalAlerts.length > 0 || warningAlerts.length > 0 || normalAlerts.length > 0;
 
   return (
-    <section
-      style={{
-        ...styles.card,
-        ...(criticalAlerts.length > 0 ? styles.criticalCard : null),
-      }}
-    >
-      <h2 style={styles.title}>Alerts</h2>
+    <section style={{ ...styles.card, ...(criticalAlerts.length > 0 ? styles.criticalCard : null) }}>
+      <h2 style={styles.title}>АЛЕРТЫ</h2>
       {hasAlerts ? (
         <div style={styles.groupStack}>
           {renderGroup("critical", criticalAlerts)}
@@ -44,7 +39,7 @@ export default function Alerts({ alertGroups }) {
           {renderGroup("normal", normalAlerts)}
         </div>
       ) : (
-        <p style={styles.emptyText}>System normal</p>
+        <p style={styles.emptyText}>Система в норме</p>
       )}
     </section>
   );
@@ -62,24 +57,15 @@ function renderGroup(severity, items) {
       key={severity}
       style={{
         ...styles.group,
-        borderLeft: `6px solid ${config.accent}`,
+        borderLeft: `5px solid ${config.accent}`,
         backgroundColor: config.background,
       }}
     >
-      <p style={{ ...styles.groupTitle, color: config.accent }}>
-        {config.label.toUpperCase()}
-      </p>
+      <p style={{ ...styles.groupTitle, color: config.accent }}>{config.label}</p>
       <ul style={styles.list}>
         {items.map((item) => (
           <li key={`${severity}-${item}`} style={styles.listItem}>
-            <span
-              style={{
-                ...styles.icon,
-                backgroundColor: config.accent,
-              }}
-            >
-              {config.icon}
-            </span>
+            <span style={{ ...styles.icon, backgroundColor: config.accent }}>{config.icon}</span>
             <span>{item}</span>
           </li>
         ))}
@@ -90,47 +76,62 @@ function renderGroup(severity, items) {
 
 const styles = {
   card: {
-    padding: "20px",
-    borderRadius: "16px",
-    backgroundColor: "#ffffff",
-    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
+    height: "100%",
+    minHeight: 0,
+    maxWidth: "100%",
+    padding: "18px",
+    borderRadius: "20px",
+    backgroundColor: "#172033",
+    border: "1px solid rgba(148, 163, 184, 0.16)",
+    boxShadow: "0 16px 40px rgba(2, 6, 23, 0.32)",
+    boxSizing: "border-box",
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
   },
   criticalCard: {
-    maxWidth: "1100px",
-    margin: "0 auto 24px",
-    boxShadow: "0 16px 40px rgba(185, 28, 28, 0.14)",
+    boxShadow: "0 20px 44px rgba(127, 29, 29, 0.28)",
   },
   title: {
-    margin: "0 0 12px",
-    fontSize: "1.2rem",
+    margin: "0 0 14px",
+    fontSize: "1.05rem",
+    letterSpacing: "0.14em",
+    color: "#f8fafc",
   },
   groupStack: {
     display: "grid",
-    gap: "12px",
+    gap: "10px",
+    minHeight: 0,
+    overflow: "hidden",
   },
   group: {
-    padding: "14px",
-    borderRadius: "12px",
+    padding: "10px 12px",
+    borderRadius: "14px",
+    overflow: "hidden",
   },
   groupTitle: {
     margin: "0 0 10px",
-    fontSize: "0.95rem",
-    fontWeight: 700,
-    letterSpacing: "0.06em",
+    fontSize: "0.86rem",
+    fontWeight: 800,
+    letterSpacing: "0.12em",
   },
   list: {
     margin: 0,
     padding: 0,
     listStyle: "none",
     display: "grid",
-    gap: "10px",
+    gap: "8px",
+    minHeight: 0,
+    overflow: "hidden",
   },
   listItem: {
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: "10px",
-    color: "#1f2937",
-    fontWeight: 500,
+    color: "#e2e8f0",
+    fontWeight: 600,
+    minWidth: 0,
+    overflow: "hidden",
   },
   icon: {
     minWidth: "24px",
@@ -140,12 +141,12 @@ const styles = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    fontWeight: 700,
+    fontWeight: 800,
     fontSize: "0.72rem",
   },
   emptyText: {
     margin: 0,
-    color: "#1f9d55",
-    fontWeight: 600,
+    color: "#22c55e",
+    fontWeight: 700,
   },
 };

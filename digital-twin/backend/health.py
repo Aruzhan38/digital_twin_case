@@ -1,4 +1,17 @@
+from __future__ import annotations
+
+import os
 from typing import Any
+
+
+ENGINE_TEMP_WARNING = float(os.getenv("ENGINE_TEMP_WARNING", "85"))
+ENGINE_TEMP_CRITICAL = float(os.getenv("ENGINE_TEMP_CRITICAL", "100"))
+FUEL_WARNING = float(os.getenv("FUEL_WARNING", "30"))
+FUEL_CRITICAL = float(os.getenv("FUEL_CRITICAL", "15"))
+BRAKE_PRESSURE_WARNING = float(os.getenv("BRAKE_PRESSURE_WARNING", "4.5"))
+BRAKE_PRESSURE_CRITICAL = float(os.getenv("BRAKE_PRESSURE_CRITICAL", "3.8"))
+HEALTH_WARNING_THRESHOLD = int(os.getenv("HEALTH_WARNING_THRESHOLD", "80"))
+HEALTH_CRITICAL_THRESHOLD = int(os.getenv("HEALTH_CRITICAL_THRESHOLD", "50"))
 
 
 def calculate_health_index(metrics: dict[str, Any]) -> dict[str, Any]:
@@ -7,196 +20,155 @@ def calculate_health_index(metrics: dict[str, Any]) -> dict[str, Any]:
     recommendations: list[str] = []
     factor_impacts: dict[str, int] = {}
     alerts: list[dict[str, str]] = []
-    alert_groups: dict[str, list[str]] = {
-        "critical": [],
-        "warning": [],
-        "normal": [],
-    }
+    alert_groups: dict[str, list[str]] = {"critical": [], "warning": [], "normal": []}
+
+    engine_temp = float(
+        metrics.get("engine_temp_smoothed", metrics.get("temperature_engine", metrics.get("engine_temp", 0)))
+    )
+    fuel_level = float(metrics.get("fuel_level_smoothed", metrics.get("fuel_level", 0)))
+    brake_pressure = float(metrics.get("pressure_brake", metrics.get("brake_pressure", 0)))
+    oil_pressure = float(metrics.get("oil_pressure", 0))
+    coolant_temp = float(metrics.get("coolant_temp", 0))
+    voltage = float(metrics.get("voltage", 0))
+    current = float(metrics.get("current", 0))
+    rpm = float(metrics.get("rpm", 0))
+    speed = float(metrics.get("speed_smoothed", metrics.get("speed", 0)))
+    alert_flag = bool(metrics.get("alert", False))
+    anomaly = metrics.get("anomaly")
+    engine_state = metrics.get("engine_state", "running")
+
+    def add_unique(items: list[str], value: str) -> None:
+        if value not in items:
+            items.append(value)
 
     def add_alert(message: str, severity: str) -> None:
-        for existing_alert in alerts:
-            if existing_alert["message"] == message and existing_alert["severity"] == severity:
-                return
+        if any(item["message"] == message and item["severity"] == severity for item in alerts):
+            return
 
         alerts.append({"message": message, "severity": severity})
         alert_groups[severity].append(message)
 
-    def add_issue(
-        condition: bool,
-        penalty: int,
-        reason: str,
-        recommendation: str,
-        factor_name: str,
-        severity: str = "warning",
-    ) -> None:
+    def add_recommendation(value: str) -> None:
+        add_unique(recommendations, value)
+
+    def add_penalty(name: str, penalty: int, reason: str, recommendation: str, severity: str) -> None:
         nonlocal health
-        if not condition:
-            return
-
         health -= penalty
-        factor_impacts[factor_name] = factor_impacts.get(factor_name, 0) - penalty
-
-        if reason not in reasons:
-            reasons.append(reason)
-
-        if recommendation not in recommendations:
-            recommendations.append(recommendation)
-
+        factor_impacts[name] = factor_impacts.get(name, 0) - penalty
+        add_unique(reasons, reason)
+        add_recommendation(recommendation)
         add_alert(reason, severity)
 
-    engine_temp = metrics.get("engine_temp_smoothed", metrics.get("engine_temp", 0))
-    oil_temp = metrics.get("oil_temp", 0)
-    oil_pressure = metrics.get("oil_pressure", 0)
-    coolant_temp = metrics.get("coolant_temp", 0)
-    fuel_level = metrics.get("fuel_level_smoothed", metrics.get("fuel_level", 0))
-    voltage = metrics.get("voltage", 0)
-    current = metrics.get("current", 0)
-    brake_pressure = metrics.get("brake_pressure", 0)
-    rpm = metrics.get("rpm", 0)
-    speed = metrics.get("speed_smoothed", metrics.get("speed", 0))
+    if fuel_level <= 0:
+        add_penalty("Топливо", 40, "Топливо закончилось", "Немедленно остановить поезд и заправить", "critical")
+    elif fuel_level <= FUEL_CRITICAL:
+        add_penalty("Топливо", 20, "Критический уровень топлива", "Заправить топливо", "critical")
+    elif fuel_level <= FUEL_WARNING:
+        add_penalty("Топливо", 10, "Низкий уровень топлива", "Заправить топливо", "warning")
 
-    add_issue(
-        engine_temp > 100,
-        25,
-        "Engine overheating",
-        "Reduce engine load",
-        "Engine temperature",
-        "critical",
-    )
-    add_issue(
-        coolant_temp > 100,
-        15,
-        "Coolant overheating",
-        "Inspect cooling system",
-        "Coolant temperature",
-        "critical",
-    )
-    add_issue(
-        oil_pressure < 2,
-        25,
-        "Low oil pressure",
-        "Check oil system",
-        "Pressure",
-        "critical",
-    )
-    add_issue(
-        oil_temp > 95,
-        10,
-        "High oil temperature",
-        "Inspect oil cooling performance",
-        "Oil temperature",
-        "warning",
-    )
+    if engine_temp >= ENGINE_TEMP_CRITICAL:
+        add_penalty("Температура двигателя", 22, "Перегрев двигателя", "Остановить поезд и проверить систему охлаждения", "critical")
+    elif engine_temp >= ENGINE_TEMP_WARNING:
+        add_penalty("Температура двигателя", 10, "Температура двигателя растёт", "Снизить нагрузку", "warning")
 
-    if fuel_level < 10:
-        add_issue(
-            True,
-            30,
-            "Critical fuel level",
-            "Refuel immediately",
-            "Fuel level",
-            "critical",
-        )
-    elif fuel_level < 20:
-        add_issue(
-            True,
-            20,
-            "Low fuel",
-            "Refuel soon",
-            "Fuel level",
-            "warning",
-        )
+    if coolant_temp >= ENGINE_TEMP_CRITICAL:
+        add_penalty("Охлаждение", 10, "Перегрев системы охлаждения", "Проверить систему охлаждения", "critical")
 
-    add_issue(
-        brake_pressure < 4,
-        20,
-        "Brake system issue",
-        "Inspect brake system",
-        "Brake pressure",
-        "critical",
-    )
-    add_issue(
-        voltage < 550,
-        10,
-        "Low voltage",
-        "Check electrical supply",
-        "Voltage",
-        "warning",
-    )
-    add_issue(
-        current > 700,
-        10,
-        "High current load",
-        "Reduce auxiliary electrical load",
-        "Current load",
-        "warning",
-    )
-    add_issue(
-        rpm > 1800,
-        10,
-        "High engine load",
-        "Reduce throttle and monitor engine load",
-        "Engine load",
-        "warning",
-    )
+    if brake_pressure <= BRAKE_PRESSURE_CRITICAL or oil_pressure < 1.8:
+        add_penalty("Давление", 20, "Проблема с давлением", "Проверить тормозную систему", "critical")
+    elif brake_pressure <= BRAKE_PRESSURE_WARNING or oil_pressure < 2.6:
+        add_penalty("Давление", 10, "Давление ниже нормы", "Проверить тормозную систему", "warning")
 
-    # Add explainable alert priorities without changing the core health score rules.
-    if 85 <= engine_temp <= 100:
-        add_alert("Engine temperature rising", "warning")
+    if alert_flag:
+        add_penalty("Сигналы", 15, "Критический системный сигнал", "Проверить систему: обнаружена ошибка", "critical")
 
-    if 20 <= fuel_level < 30:
-        add_alert("Low fuel level", "warning")
+    if voltage < 560:
+        add_penalty("Электрика", 6, "Низкое напряжение", "Проверить электросистему", "warning")
 
-    if oil_pressure > 5.5:
-        add_alert("High oil pressure", "critical")
+    if current > 720 or rpm > 1850:
+        add_penalty("Нагрузка", 6, "Высокая тяговая нагрузка", "Снизить нагрузку", "warning")
 
-    if 2 <= oil_pressure < 3:
-        add_alert("Oil pressure below optimal range", "warning")
+    if engine_state == "stopped" and fuel_level <= 0:
+        add_unique(reasons, "Поезд остановлен из-за отсутствия топлива")
+        add_recommendation("Немедленно остановить поезд и заправить")
 
-    if metrics.get("alert"):
-        add_alert("Critical system alert", "critical")
+    if anomaly == "electrical_surge":
+        add_alert("Скачок напряжения", "critical")
+        add_recommendation("Проверить электросистему")
+    elif anomaly == "fuel_drop":
+        add_alert("Резкое падение топлива", "warning")
+        add_recommendation("Заправить топливо")
+    elif anomaly == "brake_drop":
+        add_alert("Падение тормозного давления", "critical")
+        add_recommendation("Проверить тормозную систему")
+    elif anomaly == "engine_spike":
+        add_alert("Температурный всплеск", "warning")
+        add_recommendation("Снизить нагрузку на двигатель")
 
-    health = max(0, health)
-    factors = [
-        {"name": name, "impact": impact}
-        for name, impact in factor_impacts.items()
-        if impact != 0
-    ]
-    # Show the strongest health contributors first.
-    factors.sort(key=lambda factor: abs(factor["impact"]), reverse=True)
-    factors = factors[:5]
+    # Recommendation rules are applied independently from scoring so operator actions are always explicit.
+    if fuel_level < 20:
+        add_recommendation("Заправить топливо")
+    if fuel_level <= 0:
+        add_recommendation("Немедленно остановить поезд и заправить")
 
-    if health >= 80:
-        status = "normal"
-    elif health >= 50:
-        status = "warning"
+    if engine_temp > 90:
+        add_recommendation("Снизить нагрузку на двигатель")
+    if engine_temp > 100:
+        add_recommendation("Остановить поезд и проверить систему охлаждения")
+
+    if brake_pressure < BRAKE_PRESSURE_WARNING or oil_pressure < 2.6:
+        add_recommendation("Проверить тормозную систему")
+
+    if voltage < 560 or current > 720:
+        add_recommendation("Проверить электросистему")
+
+    if alert_flag or alerts:
+        add_recommendation("Проверить систему: обнаружена ошибка")
+
+    if health < HEALTH_CRITICAL_THRESHOLD:
+        status = "Критично"
+    elif health < HEALTH_WARNING_THRESHOLD:
+        status = "Внимание"
     else:
-        status = "critical"
+        status = "Норма"
 
     if not alerts:
-        add_alert("System stable", "normal")
+        add_alert("Система стабильна", "normal")
+    elif not recommendations:
+        add_recommendation("Проверить систему")
+
+    health = max(0, min(100, int(round(health))))
+
+    factors = [{"name": name, "impact": impact} for name, impact in factor_impacts.items() if impact != 0]
+    factors.sort(key=lambda factor: abs(factor["impact"]), reverse=True)
+    factors = factors[:5]
+    recommendations = recommendations[:5]
 
     system_status = {
         "engine": {
-            "status": "critical" if engine_temp > 100 else "warning" if engine_temp >= 85 else "normal",
-            "message": "Overheating" if engine_temp > 100 else "Rising temperature" if engine_temp >= 85 else "Normal",
+            "status": "critical" if engine_temp >= ENGINE_TEMP_CRITICAL else "warning" if engine_temp >= ENGINE_TEMP_WARNING else "normal",
+            "state": "stopped" if engine_state == "stopped" else "overheating" if engine_temp >= ENGINE_TEMP_WARNING else "normal",
+            "message": "Остановлен" if engine_state == "stopped" else "Перегрев" if engine_temp >= ENGINE_TEMP_CRITICAL else "Внимание" if engine_temp >= ENGINE_TEMP_WARNING else "Норма",
         },
         "fuel": {
-            "status": "critical" if fuel_level < 20 else "warning" if fuel_level < 40 else "normal",
-            "message": "Critical" if fuel_level < 20 else "Low" if fuel_level < 40 else "Normal",
+            "status": "critical" if fuel_level <= 0 or fuel_level <= FUEL_CRITICAL else "warning" if fuel_level <= FUEL_WARNING else "normal",
+            "state": "empty" if fuel_level <= 0 else "low" if fuel_level <= FUEL_WARNING else "normal",
+            "message": "Пусто" if fuel_level <= 0 else "Низкий уровень" if fuel_level <= FUEL_WARNING else "Норма",
         },
         "speed": {
-            "status": "warning" if speed > 100 else "normal",
-            "message": "High" if speed > 100 else "Normal",
+            "status": "critical" if fuel_level <= 0 and speed <= 0 else "warning" if speed > 105 else "normal",
+            "state": "stopped" if speed <= 0.5 else "high" if speed > 105 else "normal",
+            "message": "Остановлен" if speed <= 0.5 else "Высокая" if speed > 105 else "Норма",
         },
     }
 
     return {
         "health": health,
         "status": status,
+        "status_code": "critical" if status == "Критично" else "warning" if status == "Внимание" else "normal",
+        "factors": factors,
         "reasons": reasons,
         "recommendations": recommendations,
-        "factors": factors,
         "alerts": alerts,
         "alert_groups": alert_groups,
         "system_status": system_status,

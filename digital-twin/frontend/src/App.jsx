@@ -3,7 +3,25 @@ import React, { useEffect, useRef, useState } from "react";
 import Dashboard from "./components/Dashboard.jsx";
 import { connectWebSocket } from "./services/websocket";
 
-const HISTORY_LIMIT = 30;
+const HISTORY_LIMIT = 120;
+
+function normalizePayload(payload) {
+  if (!payload) {
+    return null;
+  }
+
+  if (!payload.telemetry) {
+    return payload;
+  }
+
+  return {
+    ...payload.telemetry,
+    ...payload.health,
+    system_status: payload.system_status,
+    timestamp: payload.timestamp || payload.telemetry.timestamp,
+    mode: payload.mode,
+  };
+}
 
 export default function App() {
   const [data, setData] = useState(null);
@@ -26,13 +44,18 @@ export default function App() {
 
   useEffect(() => {
     const socket = connectWebSocket(
-      (incomingData) => {
-        console.log(incomingData);
+      (incomingPayload) => {
+        const normalizedFrame = normalizePayload(incomingPayload);
+
+        if (!normalizedFrame) {
+          return;
+        }
+
         messageCounterRef.current += 1;
         setTotalMessages((count) => count + 1);
-        setData(incomingData);
+        setData(normalizedFrame);
         setHistory((currentHistory) => {
-          const nextHistory = [...currentHistory, incomingData];
+          const nextHistory = [...currentHistory, normalizedFrame];
           return nextHistory.slice(-HISTORY_LIMIT);
         });
       },

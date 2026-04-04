@@ -1,7 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-const HISTORY_URL = "http://127.0.0.1:8000/history";
+const HISTORY_URL = "http://127.0.0.1:8000/history?range_minutes=5";
 const PLAYBACK_INTERVAL_MS = 750;
+
+function normalizePayload(payload) {
+  if (!payload?.telemetry) {
+    return payload;
+  }
+
+  return {
+    ...payload.telemetry,
+    ...payload.health,
+    system_status: payload.system_status,
+    timestamp: payload.timestamp || payload.telemetry.timestamp,
+    mode: payload.mode,
+  };
+}
 
 function formatTimestamp(value) {
   if (!value) {
@@ -75,19 +89,21 @@ export default function Replay({
       }
 
       const history = await response.json();
-      if (!Array.isArray(history) || history.length === 0) {
+      const normalizedHistory = Array.isArray(history) ? history.map(normalizePayload).filter(Boolean) : [];
+
+      if (normalizedHistory.length === 0) {
         throw new Error("Replay history is empty");
       }
 
-      setReplayData(history);
+      setReplayData(normalizedHistory);
       setCurrentIndex(0);
       setIsPlaying(false);
       onReplayModeChange(true);
-      onReplayDataChange(history.slice(0, 1));
-      onReplayFrameChange(history[0]);
+      onReplayDataChange(normalizedHistory.slice(0, 1));
+      onReplayFrameChange(normalizedHistory[0]);
     } catch (fetchError) {
       console.error("Replay fetch failed:", fetchError);
-      setError("Replay data unavailable");
+      setError("История недоступна");
     } finally {
       setLoading(false);
     }
@@ -131,41 +147,25 @@ export default function Replay({
 
   return (
     <section style={styles.card}>
-      <h2 style={styles.title}>Replay Controls</h2>
+      <h2 style={styles.title}>ПОВТОР 5 МИН</h2>
       <div style={styles.actions}>
-        <button
-          onClick={handleReplayMode}
-          style={styles.primaryButton}
-          disabled={loading}
-        >
-          {loading ? "Loading..." : "Replay Mode"}
+        <button onClick={handleReplayMode} style={styles.primaryButton} disabled={loading}>
+          {loading ? "ЗАГРУЗКА..." : "ЗАГРУЗИТЬ"}
         </button>
         <button onClick={handleLiveMode} style={styles.secondaryButton}>
-          Live Mode
+          ЖИВОЙ
         </button>
       </div>
 
       <div style={styles.actions}>
-        <button
-          onClick={handlePlay}
-          style={styles.secondaryButton}
-          disabled={!replayActive || replayData.length === 0}
-        >
-          Play ▶
+        <button onClick={handlePlay} style={styles.secondaryButton} disabled={!replayActive || replayData.length === 0}>
+          ПУСК ▶
         </button>
-        <button
-          onClick={handlePause}
-          style={styles.secondaryButton}
-          disabled={!replayActive || replayData.length === 0 || !isPlaying}
-        >
-          Pause ⏸
+        <button onClick={handlePause} style={styles.secondaryButton} disabled={!replayActive || replayData.length === 0 || !isPlaying}>
+          ПАУЗА ⏸
         </button>
-        <button
-          onClick={handleReset}
-          style={styles.secondaryButton}
-          disabled={!replayActive || replayData.length === 0}
-        >
-          Reset ⏮
+        <button onClick={handleReset} style={styles.secondaryButton} disabled={!replayActive || replayData.length === 0}>
+          СБРОС ⏮
         </button>
       </div>
 
@@ -180,28 +180,21 @@ export default function Replay({
             style={styles.slider}
           />
           <div style={styles.timelineMeta}>
-            <span>
-              Frame {replayData.length === 0 ? 0 : currentIndex + 1} / {replayData.length}
-            </span>
+            <span>Кадр {replayData.length === 0 ? 0 : currentIndex + 1} / {replayData.length}</span>
             <span>{formatTimestamp(currentData?.timestamp)}</span>
           </div>
         </div>
       ) : null}
 
-      {replayActive ? <p style={styles.replayBadge}>Replay Mode</p> : null}
+      {replayActive ? <p style={styles.replayBadge}>РЕЖИМ ПОВТОРА</p> : null}
 
       <p style={styles.statusText}>
         {replayActive
           ? isPlaying
-            ? "Replay playback is running"
-            : "Replay is paused"
-          : "Live telemetry is shown in charts"}
+            ? "История воспроизводится"
+            : "История поставлена на паузу"
+          : "Поток реального времени"}
       </p>
-      {replayActive ? (
-        <p style={styles.helperText}>
-          Drag the timeline to inspect a specific timestamp.
-        </p>
-      ) : null}
       {error ? <p style={styles.errorText}>{error}</p> : null}
     </section>
   );
@@ -209,76 +202,94 @@ export default function Replay({
 
 const styles = {
   card: {
-    maxWidth: "1100px",
-    margin: "0 auto 24px",
-    padding: "20px",
-    borderRadius: "16px",
-    backgroundColor: "#ffffff",
-    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
+    height: "100%",
+    minHeight: 0,
+    maxWidth: "100%",
+    padding: "14px",
+    borderRadius: "18px",
+    backgroundColor: "#172033",
+    border: "1px solid rgba(148, 163, 184, 0.15)",
+    boxSizing: "border-box",
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
   },
   title: {
-    margin: "0 0 12px",
-    fontSize: "1.2rem",
+    margin: "0 0 10px",
+    fontSize: "0.9rem",
+    letterSpacing: "0.1em",
+    color: "#e2e8f0",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
   actions: {
     display: "flex",
     flexWrap: "wrap",
-    gap: "12px",
-    marginBottom: "12px",
+    gap: "8px",
+    marginBottom: "8px",
   },
   primaryButton: {
-    border: "none",
-    borderRadius: "10px",
-    padding: "10px 16px",
-    backgroundColor: "#2563eb",
-    color: "#ffffff",
-    fontWeight: 600,
+    border: "1px solid rgba(56, 189, 248, 0.35)",
+    borderRadius: "12px",
+    padding: "8px 12px",
+    backgroundColor: "rgba(37, 99, 235, 0.18)",
+    color: "#e0f2fe",
+    fontWeight: 700,
     cursor: "pointer",
   },
   secondaryButton: {
-    border: "1px solid #cbd5e1",
-    borderRadius: "10px",
-    padding: "10px 16px",
-    backgroundColor: "#ffffff",
-    color: "#1f2937",
-    fontWeight: 600,
+    border: "1px solid rgba(148, 163, 184, 0.25)",
+    borderRadius: "12px",
+    padding: "8px 12px",
+    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    color: "#e2e8f0",
+    fontWeight: 700,
     cursor: "pointer",
   },
   timeline: {
-    marginBottom: "12px",
+    marginBottom: "8px",
+    minHeight: 0,
+    overflow: "hidden",
   },
   slider: {
     width: "100%",
     margin: "0 0 8px",
+    accentColor: "#38bdf8",
   },
   timelineMeta: {
     display: "flex",
     justifyContent: "space-between",
     gap: "12px",
-    color: "#52606d",
-    fontSize: "0.92rem",
+    color: "#94a3b8",
+    fontSize: "0.78rem",
     flexWrap: "wrap",
+    overflow: "hidden",
   },
   replayBadge: {
     display: "inline-block",
-    margin: "0 0 12px",
+    margin: "0 0 8px",
     padding: "6px 12px",
     borderRadius: "999px",
-    backgroundColor: "#dbeafe",
-    color: "#1d4ed8",
+    backgroundColor: "rgba(59, 130, 246, 0.15)",
+    color: "#7dd3fc",
     fontWeight: 700,
   },
   statusText: {
     margin: 0,
-    color: "#52606d",
-  },
-  helperText: {
-    margin: "8px 0 0",
-    color: "#52606d",
-    fontSize: "0.92rem",
+    color: "#cbd5e1",
+    fontSize: "0.82rem",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
   errorText: {
     margin: "12px 0 0",
-    color: "#dc2626",
+    color: "#f87171",
+    fontSize: "0.8rem",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
 };

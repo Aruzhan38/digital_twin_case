@@ -24,6 +24,23 @@ function formatTimestamp(value) {
   });
 }
 
+function renderTooltipValue(value, label) {
+  return [`${value}`, label];
+}
+
+function normalizeChartData(data) {
+  return (Array.isArray(data) ? data : []).map((point) => ({
+    ...point,
+    speed_chart: point.speed_smoothed ?? point.speed ?? 0,
+    temperature_chart:
+      point.engine_temp_smoothed ??
+      point.engine_temp ??
+      point.temperature_engine ??
+      0,
+    fuel_chart: point.fuel_level_smoothed ?? point.fuel_level ?? 0,
+  }));
+}
+
 function ChartCard({ title, dataKey, stroke, data }) {
   return (
     <div style={styles.card}>
@@ -31,17 +48,20 @@ function ChartCard({ title, dataKey, stroke, data }) {
       <div style={styles.chartWrap}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
-            <CartesianGrid stroke="#d9e2ec" strokeDasharray="3 3" />
+            <CartesianGrid stroke="rgba(148, 163, 184, 0.16)" strokeDasharray="3 3" />
             <XAxis
               dataKey="timestamp"
               tickFormatter={formatTimestamp}
               minTickGap={24}
-              stroke="#52606d"
+              stroke="#64748b"
+              tick={{ fill: "#94a3b8", fontSize: 12 }}
             />
-            <YAxis stroke="#52606d" />
+            <YAxis stroke="#64748b" tick={{ fill: "#94a3b8", fontSize: 12 }} />
             <Tooltip
+              contentStyle={styles.tooltip}
+              labelStyle={styles.tooltipLabel}
               labelFormatter={formatTimestamp}
-              formatter={(value) => [value, title]}
+              formatter={(value) => renderTooltipValue(value, title)}
             />
             <Line
               type="monotone"
@@ -58,40 +78,31 @@ function ChartCard({ title, dataKey, stroke, data }) {
   );
 }
 
-export default function Charts({ data }) {
-  if (!data || data.length === 0) {
+export default function Charts({ compact = false, data }) {
+  const chartData = normalizeChartData(data);
+
+  if (chartData.length === 0) {
     return (
       <section style={styles.emptyCard}>
-        <h2 style={styles.title}>Telemetry Trends</h2>
-        <p style={styles.subtitle}>Smoothed data (EMA)</p>
-        <p style={styles.emptyText}>Waiting for chart data...</p>
+        <h2 style={styles.title}>ТРЕНДЫ</h2>
+        <p style={styles.subtitle}>Последние точки телеметрии</p>
+        <p style={styles.emptyText}>Нет данных</p>
       </section>
     );
   }
 
   return (
     <section style={styles.section}>
-      <h2 style={styles.title}>Telemetry Trends</h2>
-      <p style={styles.subtitle}>Smoothed data (EMA)</p>
+      <div style={styles.sectionHeader}>
+        <div>
+          <h2 style={styles.title}>ТРЕНДЫ</h2>
+          <p style={styles.subtitle}>{compact ? "Последние минуты" : "Последние 5-30 минут, сглаживание EMA"}</p>
+        </div>
+      </div>
       <div style={styles.grid}>
-        <ChartCard
-          title="Speed"
-          dataKey="speed_smoothed"
-          stroke="#1d4ed8"
-          data={data}
-        />
-        <ChartCard
-          title="Engine Temp"
-          dataKey="engine_temp_smoothed"
-          stroke="#dc2626"
-          data={data}
-        />
-        <ChartCard
-          title="Fuel Level"
-          dataKey="fuel_level_smoothed"
-          stroke="#0f766e"
-          data={data}
-        />
+        <ChartCard title="СКОРОСТЬ" dataKey="speed_chart" stroke="#38bdf8" data={chartData} />
+        <ChartCard title="ТЕМПЕРАТУРА" dataKey="temperature_chart" stroke="#f97316" data={chartData} />
+        <ChartCard title="ТОПЛИВО" dataKey="fuel_chart" stroke="#22c55e" data={chartData} />
       </div>
     </section>
   );
@@ -99,51 +110,92 @@ export default function Charts({ data }) {
 
 const styles = {
   section: {
-    maxWidth: "1100px",
-    margin: "0 auto 24px",
+    width: "100%",
+    height: "100%",
+    minHeight: 0,
+    maxWidth: "100%",
+    overflow: "hidden",
+    boxSizing: "border-box",
+  },
+  sectionHeader: {
+    marginBottom: "8px",
   },
   title: {
-    margin: "0 0 16px",
-    textAlign: "center",
-    fontSize: "1.4rem",
+    margin: "0 0 4px",
+    fontSize: "1rem",
+    letterSpacing: "0.1em",
+    color: "#f8fafc",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
   subtitle: {
-    margin: "0 0 16px",
-    textAlign: "center",
-    color: "#52606d",
-    fontSize: "0.95rem",
+    margin: 0,
+    color: "#94a3b8",
+    fontSize: "0.78rem",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: "16px",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "10px",
+    height: "100%",
+    minHeight: 0,
+    maxWidth: "100%",
+    overflow: "hidden",
   },
   card: {
-    padding: "20px",
-    borderRadius: "16px",
-    backgroundColor: "#ffffff",
-    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
+    height: "100%",
+    minHeight: 0,
+    maxWidth: "100%",
+    padding: "10px 12px",
+    borderRadius: "14px",
+    backgroundColor: "#172033",
+    border: "1px solid rgba(148, 163, 184, 0.15)",
+    boxSizing: "border-box",
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
   },
   cardTitle: {
-    margin: "0 0 12px",
-    fontSize: "1rem",
-    color: "#334e68",
+    margin: "0 0 6px",
+    fontSize: "0.82rem",
+    letterSpacing: "0.08em",
+    color: "#e2e8f0",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
   chartWrap: {
     width: "100%",
-    height: "240px",
+    minHeight: 0,
+    height: "200px",
+    maxHeight: "200px",
+  },
+  tooltip: {
+    backgroundColor: "#0f172a",
+    border: "1px solid rgba(148, 163, 184, 0.2)",
+    borderRadius: "12px",
+    color: "#e2e8f0",
+  },
+  tooltipLabel: {
+    color: "#94a3b8",
   },
   emptyCard: {
-    maxWidth: "1100px",
-    margin: "0 auto 24px",
-    padding: "20px",
-    borderRadius: "16px",
-    backgroundColor: "#ffffff",
-    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
-    textAlign: "center",
+    padding: "12px",
+    borderRadius: "14px",
+    backgroundColor: "#172033",
+    border: "1px solid rgba(148, 163, 184, 0.15)",
+    height: "100%",
+    minHeight: 0,
+    boxSizing: "border-box",
+    overflow: "hidden",
   },
   emptyText: {
     margin: 0,
-    color: "#52606d",
+    color: "#94a3b8",
   },
 };

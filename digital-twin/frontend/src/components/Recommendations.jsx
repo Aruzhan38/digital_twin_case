@@ -5,18 +5,18 @@ export default function Recommendations({ recommendations }) {
 
   return (
     <section style={styles.card}>
-      <h2 style={styles.title}>Recommendations</h2>
+      <h2 style={styles.title}>РЕКОМЕНДАЦИИ</h2>
       {hasRecommendations ? (
         <ul style={styles.list}>
           {recommendations.map((recommendation) => (
             <li key={recommendation} style={styles.listItem}>
-              <span style={styles.arrow}>-&gt;</span>
+              <span style={styles.icon}>🔧</span>
               <span>{recommendation}</span>
             </li>
           ))}
         </ul>
       ) : (
-        <p style={styles.emptyText}>No recommendations</p>
+        <p style={styles.emptyText}>Система работает нормально</p>
       )}
     </section>
   );
@@ -24,35 +24,44 @@ export default function Recommendations({ recommendations }) {
 
 const styles = {
   card: {
-    padding: "20px",
+    minHeight: "120px",
+    padding: "12px",
     borderRadius: "16px",
-    backgroundColor: "#ffffff",
-    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
+    backgroundColor: "#172033",
+    border: "1px solid rgba(148, 163, 184, 0.15)",
+    overflow: "hidden",
+    boxSizing: "border-box",
   },
   title: {
-    margin: "0 0 12px",
-    fontSize: "1.2rem",
+    margin: "0 0 10px",
+    fontSize: "0.88rem",
+    letterSpacing: "0.1em",
+    color: "#e2e8f0",
   },
   list: {
     margin: 0,
     padding: 0,
     listStyle: "none",
     display: "grid",
-    gap: "10px",
+    gap: "8px",
   },
   listItem: {
     display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    color: "#1f2937",
+    alignItems: "flex-start",
+    gap: "8px",
+    color: "#cbd5e1",
     fontWeight: 500,
+    fontSize: "0.84rem",
+    padding: "8px 10px",
+    borderRadius: "10px",
+    backgroundColor: "rgba(15, 23, 42, 0.55)",
   },
-  arrow: {
-    color: "#2563eb",
-    fontWeight: 700,
+  icon: {
+    minWidth: "18px",
+    lineHeight: 1,
   },
   emptyText: {
     margin: 0,
-    color: "#52606d",
+    color: "#94a3b8",
   },
 };

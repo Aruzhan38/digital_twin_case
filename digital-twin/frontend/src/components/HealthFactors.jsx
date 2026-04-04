@@ -1,25 +1,32 @@
 import React from "react";
 
+const FACTOR_LABELS = {
+  alerts: "Системные сигналы",
+  coolant: "Охлаждение",
+  engine_temp: "Температура двигателя",
+  fuel: "Топливо",
+  load: "Тяговая нагрузка",
+  pressure: "Давление",
+  voltage: "Напряжение",
+};
+
 export default function HealthFactors({ factors }) {
-  const visibleFactors = Array.isArray(factors) ? factors : [];
+  const visibleFactors = Array.isArray(factors) ? factors.slice(0, 4) : [];
 
   return (
     <section style={styles.card}>
-      <h2 style={styles.title}>Top factors affecting health</h2>
+      <h2 style={styles.title}>КЛЮЧЕВЫЕ ФАКТОРЫ</h2>
       {visibleFactors.length > 0 ? (
         <ul style={styles.list}>
           {visibleFactors.map((factor) => (
-            <li
-              key={`${factor.name}-${factor.impact}`}
-              style={styles.listItem}
-            >
-              <span>{factor.name}</span>
+            <li key={`${factor.name}-${factor.impact}`} style={styles.listItem}>
+              <span style={styles.name}>{FACTOR_LABELS[factor.name] || factor.name}</span>
               <strong style={styles.impact}>{factor.impact}</strong>
             </li>
           ))}
         </ul>
       ) : (
-        <p style={styles.emptyText}>No issues detected</p>
+        <p style={styles.emptyText}>Отклонений нет</p>
       )}
     </section>
   );
@@ -27,37 +34,49 @@ export default function HealthFactors({ factors }) {
 
 const styles = {
   card: {
-    maxWidth: "560px",
-    margin: "0 auto 24px",
-    padding: "20px",
+    minHeight: "120px",
+    padding: "12px 14px",
     borderRadius: "16px",
-    backgroundColor: "#ffffff",
-    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
+    backgroundColor: "#172033",
+    border: "1px solid rgba(148, 163, 184, 0.15)",
+    overflow: "hidden",
+    boxSizing: "border-box",
   },
   title: {
-    margin: "0 0 12px",
-    fontSize: "1.2rem",
+    margin: "0 0 10px",
+    fontSize: "0.86rem",
+    letterSpacing: "0.1em",
+    color: "#e2e8f0",
   },
   list: {
     margin: 0,
     padding: 0,
     listStyle: "none",
     display: "grid",
-    gap: "10px",
+    gap: "8px",
   },
   listItem: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     gap: "12px",
-    color: "#1f2937",
+    padding: "10px 12px",
+    borderRadius: "10px",
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
+  },
+  name: {
+    color: "#cbd5e1",
+    fontSize: "0.86rem",
+    fontWeight: 600,
   },
   impact: {
-    color: "#dc2626",
-    fontWeight: 700,
+    color: "#fb923c",
+    fontWeight: 800,
+    fontSize: "0.9rem",
   },
   emptyText: {
     margin: 0,
-    color: "#52606d",
+    color: "#94a3b8",
+    fontSize: "0.9rem",
   },
 };

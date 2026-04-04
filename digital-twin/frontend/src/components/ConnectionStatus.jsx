@@ -3,21 +3,24 @@ import React from "react";
 const STATUS_CONFIG = {
   connected: {
     icon: "🟢",
-    label: "Connected",
-    color: "#15803d",
-    background: "#dcfce7",
+    label: "СВЯЗЬ ЕСТЬ",
+    color: "#22c55e",
+    background: "rgba(34, 197, 94, 0.12)",
+    border: "rgba(34, 197, 94, 0.35)",
   },
   connecting: {
     icon: "🟡",
-    label: "Connecting",
-    color: "#b45309",
-    background: "#fef3c7",
+    label: "ПОДКЛЮЧЕНИЕ",
+    color: "#f59e0b",
+    background: "rgba(245, 158, 11, 0.12)",
+    border: "rgba(245, 158, 11, 0.35)",
   },
   disconnected: {
     icon: "🔴",
-    label: "Disconnected",
-    color: "#b91c1c",
-    background: "#fee2e2",
+    label: "НЕТ СВЯЗИ",
+    color: "#ef4444",
+    background: "rgba(239, 68, 68, 0.12)",
+    border: "rgba(239, 68, 68, 0.35)",
   },
 };
 
@@ -30,6 +33,7 @@ export default function ConnectionStatus({ status }) {
         ...styles.badge,
         color: config.color,
         backgroundColor: config.background,
+        borderColor: config.border,
       }}
     >
       <span>{config.icon}</span>
@@ -43,9 +47,13 @@ const styles = {
     display: "inline-flex",
     alignItems: "center",
     gap: "8px",
-    padding: "8px 12px",
+    padding: "10px 14px",
     borderRadius: "999px",
+    border: "1px solid",
     fontWeight: 700,
-    fontSize: "0.9rem",
+    fontSize: "0.85rem",
+    letterSpacing: "0.04em",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    backdropFilter: "blur(8px)",
   },
 };
