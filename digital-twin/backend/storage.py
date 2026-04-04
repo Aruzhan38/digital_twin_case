@@ -19,4 +19,5 @@ def get_history() -> list:
 
 
 def save(event: dict) -> None:
+    print(f"[storage] saving telemetry at {event.get('timestamp', 'unknown')}")
     add_event(event)

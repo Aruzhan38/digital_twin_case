@@ -12,27 +12,39 @@ from storage import save
 logger = logging.getLogger(__name__)
 
 
+def generate_payload() -> dict[str, Any]:
+    telemetry = generate_data()
+    health_info = calculate_health(telemetry)
+
+    payload: dict[str, Any] = {
+        **telemetry,
+        **health_info,
+    }
+
+    print(f"[generator] generated telemetry at {payload['timestamp']}")
+    save(payload)
+    return payload
+
+
 async def websocket_handler(websocket: WebSocket, load_mode: str = "normal") -> None:
     await websocket.accept()
+    print("[websocket] client connected")
 
     sleep_seconds = 0.1 if load_mode == "highload" else 1.0
 
     while True:
         try:
-            telemetry = generate_data()
-            health_info = calculate_health(telemetry)
-
-            payload: dict[str, Any] = {
-                **telemetry,
-                **health_info,
-            }
-
-            save(payload)
+            payload = generate_payload()
             await websocket.send_json(payload)
+            print(f"[websocket] streamed telemetry at {payload['timestamp']}")
             await asyncio.sleep(sleep_seconds)
         except WebSocketDisconnect:
+            print("[websocket] client disconnected")
             logger.info("WebSocket client disconnected")
             break
+        except asyncio.CancelledError:
+            print("[websocket] streaming task cancelled")
+            raise
         except Exception as exc:
             logger.exception("Telemetry streaming error: %s", exc)
             await asyncio.sleep(sleep_seconds)
