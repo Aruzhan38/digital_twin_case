@@ -5,6 +5,11 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Iterator
+
+
+EMA_ALPHA = 0.2
+
+
 @dataclass
 class SimulatorState:
     speed: float = 42.0
@@ -18,13 +23,34 @@ class SimulatorState:
     current: float = 260.0
     brake_pressure: float = 7.6
 
+
 _STATE = SimulatorState()
+_PREVIOUS_VALUES: dict[str, float | None] = {
+    "engine_temp": None,
+    "speed": None,
+    "fuel_level": None,
+}
+
+
 def _clamp(value: float, minimum: float, maximum: float) -> float:
     return max(minimum, min(value, maximum))
+
 
 def _next_value(current: float, drift: float, minimum: float, maximum: float) -> float:
     updated = current + random.uniform(-drift, drift)
     return _clamp(updated, minimum, maximum)
+
+
+def _apply_ema(name: str, current_value: float) -> float:
+    previous_value = _PREVIOUS_VALUES.get(name)
+    if previous_value is None:
+        smoothed_value = current_value
+    else:
+        smoothed_value = EMA_ALPHA * current_value + (1 - EMA_ALPHA) * previous_value
+
+    _PREVIOUS_VALUES[name] = smoothed_value
+    return smoothed_value
+
 
 def generate_simulated_data() -> dict[str, Any]:
     """
@@ -78,14 +104,25 @@ def generate_simulated_data() -> dict[str, Any]:
         ]
     )
 
+    speed = round(_STATE.speed, 1)
+    engine_temp = round(_STATE.engine_temp, 1)
+    fuel_level = round(_STATE.fuel_level, 1)
+
+    speed_smoothed = round(_apply_ema("speed", speed), 1)
+    engine_temp_smoothed = round(_apply_ema("engine_temp", engine_temp), 1)
+    fuel_level_smoothed = round(_apply_ema("fuel_level", fuel_level), 1)
+
     return {
-        "speed": round(_STATE.speed, 1),
+        "speed": speed,
+        "speed_smoothed": speed_smoothed,
         "rpm": round(_STATE.rpm),
-        "engine_temp": round(_STATE.engine_temp, 1),
+        "engine_temp": engine_temp,
+        "engine_temp_smoothed": engine_temp_smoothed,
         "oil_temp": round(_STATE.oil_temp, 1),
         "oil_pressure": round(_STATE.oil_pressure, 2),
         "coolant_temp": round(_STATE.coolant_temp, 1),
-        "fuel_level": round(_STATE.fuel_level, 1),
+        "fuel_level": fuel_level,
+        "fuel_level_smoothed": fuel_level_smoothed,
         "voltage": round(_STATE.voltage, 1),
         "current": round(_STATE.current, 1),
         "brake_pressure": round(_STATE.brake_pressure, 2),
@@ -93,8 +130,11 @@ def generate_simulated_data() -> dict[str, Any]:
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
+
 def generate_data() -> dict[str, Any]:
     return generate_simulated_data()
+
+
 def stream_simulated_data(interval_seconds: float = 1.0) -> Iterator[dict[str, Any]]:
     while True:
         yield generate_simulated_data()

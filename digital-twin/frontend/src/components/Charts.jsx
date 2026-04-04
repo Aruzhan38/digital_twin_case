@@ -63,6 +63,7 @@ export default function Charts({ data }) {
     return (
       <section style={styles.emptyCard}>
         <h2 style={styles.title}>Telemetry Trends</h2>
+        <p style={styles.subtitle}>Smoothed data (EMA)</p>
         <p style={styles.emptyText}>Waiting for chart data...</p>
       </section>
     );
@@ -71,17 +72,23 @@ export default function Charts({ data }) {
   return (
     <section style={styles.section}>
       <h2 style={styles.title}>Telemetry Trends</h2>
+      <p style={styles.subtitle}>Smoothed data (EMA)</p>
       <div style={styles.grid}>
-        <ChartCard title="Speed" dataKey="speed" stroke="#1d4ed8" data={data} />
+        <ChartCard
+          title="Speed"
+          dataKey="speed_smoothed"
+          stroke="#1d4ed8"
+          data={data}
+        />
         <ChartCard
           title="Engine Temp"
-          dataKey="engine_temp"
+          dataKey="engine_temp_smoothed"
           stroke="#dc2626"
           data={data}
         />
         <ChartCard
           title="Fuel Level"
-          dataKey="fuel_level"
+          dataKey="fuel_level_smoothed"
           stroke="#0f766e"
           data={data}
         />
@@ -99,6 +106,12 @@ const styles = {
     margin: "0 0 16px",
     textAlign: "center",
     fontSize: "1.4rem",
+  },
+  subtitle: {
+    margin: "0 0 16px",
+    textAlign: "center",
+    color: "#52606d",
+    fontSize: "0.95rem",
   },
   grid: {
     display: "grid",

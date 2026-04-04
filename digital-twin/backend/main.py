@@ -1,8 +1,11 @@
 import asyncio
+import csv
 from contextlib import suppress
+from io import StringIO
 
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 
 from storage import get_history
 from websocket import generate_payload, get_mode, set_mode, websocket_handler
@@ -57,6 +60,32 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 @app.get("/history")
 def history() -> list:
     return get_history()
+
+
+@app.get("/export")
+def export_report() -> Response:
+    rows = get_history()
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["timestamp", "speed", "engine_temp", "fuel_level", "health", "status"])
+
+    for row in rows:
+        writer.writerow(
+            [
+                row.get("timestamp", ""),
+                row.get("speed", ""),
+                row.get("engine_temp", ""),
+                row.get("fuel_level", ""),
+                row.get("health", ""),
+                row.get("status", ""),
+            ]
+        )
+
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="report.csv"'},
+    )
 
 
 @app.get("/mode/{mode}")

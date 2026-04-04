@@ -2,48 +2,50 @@ import React, { useMemo, useState } from "react";
 
 import Alerts from "./Alerts.jsx";
 import Charts from "./Charts.jsx";
+import ConnectionStatus from "./ConnectionStatus.jsx";
+import ExportButton from "./ExportButton.jsx";
+import HealthFactors from "./HealthFactors.jsx";
 import HealthIndex from "./HealthIndex.jsx";
+import LoadControl from "./LoadControl.jsx";
+import MiniMap from "./MiniMap.jsx";
 import Recommendations from "./Recommendations.jsx";
 import Replay from "./Replay.jsx";
+import SystemStatus from "./SystemStatus.jsx";
 
-const MODE_URL = "http://127.0.0.1:8000/mode";
-
-export default function Dashboard({ data, history }) {
-  const [replayData, setReplayData] = useState([]);
+export default function Dashboard({
+  connectionStatus,
+  data,
+  eventsPerSecond,
+  history,
+  totalMessages,
+}) {
+  const [isReplayMode, setIsReplayMode] = useState(false);
   const [mode, setMode] = useState("normal");
   const [modeLoading, setModeLoading] = useState(false);
+  const [replayData, setReplayData] = useState([]);
+  const [replayFrame, setReplayFrame] = useState(null);
 
   const chartData = useMemo(() => {
-    if (replayData.length > 0) {
+    if (isReplayMode) {
       return replayData.slice(-30);
     }
 
     return history;
-  }, [history, replayData]);
+  }, [history, isReplayMode, replayData]);
 
-  async function handleModeChange(nextMode) {
-    setModeLoading(true);
+  const activeData = isReplayMode ? replayFrame : data;
 
-    try {
-      const response = await fetch(`${MODE_URL}/${nextMode}`);
-
-      if (!response.ok) {
-        throw new Error(`Mode update failed with status ${response.status}`);
-      }
-
-      const payload = await response.json();
-      setMode(payload.mode);
-    } catch (error) {
-      console.error("Mode update failed:", error);
-    } finally {
-      setModeLoading(false);
-    }
-  }
-
-  if (!data) {
+  if (!activeData) {
     return (
       <section style={styles.emptyState}>
-        <h1 style={styles.title}>Digital Twin Dashboard</h1>
+        <div style={styles.topBar}>
+          <h1 style={styles.title}>Digital Twin Dashboard</h1>
+          <ConnectionStatus status={connectionStatus} />
+        </div>
+        {connectionStatus === "disconnected" ? (
+          <p style={styles.connectionWarning}>No connection to server</p>
+        ) : null}
+        {isReplayMode ? <p style={styles.replayTag}>Replay Mode</p> : null}
         <p style={styles.emptyText}>Waiting for data...</p>
       </section>
     );
@@ -55,38 +57,45 @@ export default function Dashboard({ data, history }) {
     speed,
     engine_temp: engineTemp,
     fuel_level: fuelLevel,
+    alert_groups: alertGroups,
+    factors,
     rpm,
-    reasons,
     recommendations,
-  } = data;
+    system_status: systemStatus,
+  } = activeData;
 
   return (
     <section style={styles.page}>
-      <h1 style={styles.title}>Digital Twin Dashboard</h1>
-      <HealthIndex health={health} status={status} />
-
-      <div style={styles.controlsCard}>
-        <div>
-          <h2 style={styles.infoTitle}>Simulation Mode</h2>
-          <p style={styles.modeText}>Current mode: {mode}</p>
-        </div>
-        <div style={styles.modeActions}>
-          <button
-            onClick={() => handleModeChange("normal")}
-            style={styles.modeButton}
-            disabled={modeLoading}
-          >
-            Normal
-          </button>
-          <button
-            onClick={() => handleModeChange("highload")}
-            style={styles.modeButton}
-            disabled={modeLoading}
-          >
-            High Load
-          </button>
+      <div style={styles.topBar}>
+        <h1 style={styles.title}>Digital Twin Dashboard</h1>
+        <div style={styles.topActions}>
+          <ExportButton />
+          <ConnectionStatus status={connectionStatus} />
         </div>
       </div>
+      {connectionStatus === "disconnected" ? (
+        <p style={styles.connectionWarning}>No connection to server</p>
+      ) : null}
+      {isReplayMode ? <p style={styles.replayTag}>Replay Mode</p> : null}
+      <HealthIndex health={health} status={status} />
+      <LoadControl
+        eventsPerSecond={eventsPerSecond}
+        mode={mode}
+        modeLoading={modeLoading}
+        onModeRequest={(nextMode) => {
+          setModeLoading(true);
+          setMode(nextMode);
+        }}
+        onModeResolved={(nextMode) => {
+          setMode(nextMode);
+          setModeLoading(false);
+        }}
+        totalMessages={totalMessages}
+      />
+      <MiniMap speed={speed} timestamp={activeData.timestamp} />
+      <SystemStatus systemStatus={systemStatus} />
+      <Alerts alertGroups={alertGroups} />
+      <HealthFactors factors={factors} />
 
       <div style={styles.telemetryGrid}>
         <div style={styles.metricCard}>
@@ -108,14 +117,22 @@ export default function Dashboard({ data, history }) {
       </div>
 
       <Replay
-        onReplayData={setReplayData}
-        onReplayExit={() => setReplayData([])}
-        replayActive={replayData.length > 0}
+        onReplayDataChange={setReplayData}
+        onReplayFrameChange={setReplayFrame}
+        onReplayModeChange={setIsReplayMode}
+        replayActive={isReplayMode}
       />
-      <Charts data={chartData} />
+      <div
+        style={
+          connectionStatus === "disconnected" && !isReplayMode
+            ? styles.chartsDisabled
+            : undefined
+        }
+      >
+        <Charts data={chartData} />
+      </div>
 
       <div style={styles.infoGrid}>
-        <Alerts reasons={reasons} />
         <Recommendations recommendations={recommendations} />
       </div>
     </section>
@@ -143,45 +160,48 @@ const styles = {
     padding: "24px",
   },
   title: {
-    margin: "0 0 24px",
-    textAlign: "center",
+    margin: 0,
     fontSize: "2rem",
+  },
+  topBar: {
+    maxWidth: "1100px",
+    margin: "0 auto 24px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "16px",
+    flexWrap: "wrap",
+  },
+  topActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
   },
   emptyText: {
     margin: 0,
     fontSize: "1.1rem",
   },
-  controlsCard: {
+  replayTag: {
     maxWidth: "1100px",
     margin: "0 auto 24px",
-    padding: "20px",
-    borderRadius: "16px",
-    backgroundColor: "#ffffff",
-    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "16px",
-    flexWrap: "wrap",
+    padding: "10px 14px",
+    borderRadius: "999px",
+    backgroundColor: "#dbeafe",
+    color: "#1d4ed8",
+    fontWeight: 700,
+    textAlign: "center",
   },
-  modeText: {
-    margin: "6px 0 0",
-    color: "#52606d",
-    textTransform: "capitalize",
-  },
-  modeActions: {
-    display: "flex",
-    gap: "12px",
-    flexWrap: "wrap",
-  },
-  modeButton: {
-    border: "none",
-    borderRadius: "10px",
-    padding: "10px 16px",
-    backgroundColor: "#0f766e",
-    color: "#ffffff",
+  connectionWarning: {
+    maxWidth: "1100px",
+    margin: "0 auto 24px",
+    padding: "12px 16px",
+    borderRadius: "12px",
+    backgroundColor: "#fee2e2",
+    color: "#b91c1c",
     fontWeight: 600,
-    cursor: "pointer",
+    textAlign: "center",
   },
   telemetryGrid: {
     display: "grid",
@@ -215,8 +235,7 @@ const styles = {
     maxWidth: "960px",
     margin: "0 auto",
   },
-  infoTitle: {
-    margin: 0,
-    fontSize: "1.2rem",
+  chartsDisabled: {
+    opacity: 0.65,
   },
 };
