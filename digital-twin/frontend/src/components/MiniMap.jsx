@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 const POSITION_FACTOR = 0.035;
 const SPEED_LIMIT = 40;
@@ -38,8 +38,31 @@ function getTrackY(position) {
 
 export default function MiniMap({ speed, timestamp }) {
   const [position, setPosition] = useState(18);
+  const [mapWidth, setMapWidth] = useState(VIEWBOX_WIDTH);
+  const mapFrameRef = useRef(null);
   const numericSpeed = Number(speed || 0);
   const isOverspeed = numericSpeed > SPEED_LIMIT;
+
+  useEffect(() => {
+    const element = mapFrameRef.current;
+
+    if (!element) {
+      return undefined;
+    }
+
+    const updateWidth = () => {
+      setMapWidth(element.clientWidth || VIEWBOX_WIDTH);
+    };
+
+    updateWidth();
+
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     if (!timestamp) {
@@ -47,16 +70,24 @@ export default function MiniMap({ speed, timestamp }) {
     }
 
     setPosition((currentPosition) => {
+      if (numericSpeed <= 0) {
+        return currentPosition;
+      }
+
       const nextPosition = currentPosition + numericSpeed * POSITION_FACTOR;
       return nextPosition >= MAP_DISTANCE ? nextPosition % MAP_DISTANCE : nextPosition;
     });
   }, [numericSpeed, timestamp]);
 
   const clampedPosition = clamp(position, 0, MAP_DISTANCE);
-  const trainX = useMemo(() => positionToX(clampedPosition), [clampedPosition]);
-  const trainY = useMemo(() => getTrackY(clampedPosition), [clampedPosition]);
+  const trainX = useMemo(() => {
+    const progress = clampedPosition / MAP_DISTANCE;
+    const horizontalPadding = 24;
+    const usableWidth = Math.max(mapWidth - horizontalPadding * 2, 0);
+    return horizontalPadding + progress * usableWidth;
+  }, [clampedPosition, mapWidth]);
+  const trainY = useMemo(() => clamp(getTrackY(clampedPosition), 26, 134), [clampedPosition]);
   const inDangerZone = clampedPosition >= DANGER_START && clampedPosition <= DANGER_END;
-  const stationX = Math.max(START_X + 18, Math.min(trainX - 26, END_X - 110));
 
   return (
     <section style={{ ...styles.card, ...(isOverspeed || inDangerZone ? styles.warningCard : null) }}>
@@ -72,7 +103,12 @@ export default function MiniMap({ speed, timestamp }) {
         </div>
       </div>
 
-      <div style={styles.mapFrame}>
+      <div ref={mapFrameRef} style={styles.mapFrame}>
+        <div style={styles.stationLabel}>
+          <strong style={styles.stationTitle}>СТ. ЗАВОДСКАЯ</strong>
+          <span style={styles.stationMeta}>{STATION_DISTANCE} км</span>
+        </div>
+
         <svg
           width="100%"
           height="160"
@@ -169,18 +205,6 @@ export default function MiniMap({ speed, timestamp }) {
             strokeLinecap="round"
           />
 
-          <text x={stationX} y="26" style={svgStyles.stationTitle}>СТ. ЗАВОДСКАЯ</text>
-          <text x={stationX} y="40" style={svgStyles.stationMeta}>{STATION_DISTANCE} км</text>
-          <line
-            x1={stationX + 28}
-            y1="46"
-            x2={stationX + 28}
-            y2={TRACK_Y - 8}
-            stroke="#60a5fa"
-            strokeWidth="1.5"
-            strokeDasharray="3 3"
-          />
-
           <text x={positionToX(DANGER_START) + 6} y="28" style={svgStyles.dangerText}>⚠ ОПАСНАЯ ЗОНА</text>
 
           {SCALE_MARKERS.map((marker) => {
@@ -195,11 +219,22 @@ export default function MiniMap({ speed, timestamp }) {
             );
           })}
 
-          <g style={styles.trainGroup}>
-            <circle cx={trainX} cy={trainY} r="11" fill="rgba(59, 130, 246, 0.16)" />
-            <circle cx={trainX} cy={trainY} r="6" fill="#3B82F6" stroke="#dbeafe" strokeWidth="2" />
-          </g>
         </svg>
+
+        <div
+          style={{
+            ...styles.train,
+            left: `${clamp(trainX, 11, Math.max(mapWidth - 11, 11))}px`,
+            top: `${trainY}px`,
+            transition:
+              numericSpeed > 0
+                ? "left 0.6s cubic-bezier(0.4, 0, 0.2, 1), top 0.6s cubic-bezier(0.4, 0, 0.2, 1)"
+                : "left 0.2s linear, top 0.2s linear",
+          }}
+        >
+          <div style={styles.trainGlow} />
+          <div style={styles.trainCore} />
+        </div>
       </div>
 
       <div style={styles.footer}>
@@ -227,18 +262,6 @@ export default function MiniMap({ speed, timestamp }) {
 }
 
 const svgStyles = {
-  stationTitle: {
-    fill: "#e5eefc",
-    fontSize: "11px",
-    letterSpacing: "0.14em",
-    fontWeight: 700,
-  },
-  stationMeta: {
-    fill: "#93c5fd",
-    fontSize: "10px",
-    letterSpacing: "0.08em",
-    fontWeight: 600,
-  },
   dangerText: {
     fill: "#fca5a5",
     fontSize: "10px",
@@ -313,6 +336,7 @@ const styles = {
     fontWeight: 800,
   },
   mapFrame: {
+    position: "relative",
     width: "100%",
     borderRadius: "16px",
     background:
@@ -323,8 +347,56 @@ const styles = {
   scheme: {
     display: "block",
   },
-  trainGroup: {
-    transition: "all 0.7s ease",
+  stationLabel: {
+    position: "absolute",
+    top: "16px",
+    left: "16px",
+    zIndex: 2,
+    display: "grid",
+    gap: "4px",
+    padding: "8px 10px",
+    borderRadius: "12px",
+    backgroundColor: "rgba(15, 23, 42, 0.86)",
+    border: "1px solid rgba(96, 165, 250, 0.16)",
+  },
+  stationTitle: {
+    color: "#e5eefc",
+    fontSize: "0.76rem",
+    letterSpacing: "0.14em",
+    fontWeight: 700,
+  },
+  stationMeta: {
+    color: "#93c5fd",
+    fontSize: "0.72rem",
+    letterSpacing: "0.08em",
+    fontWeight: 600,
+  },
+  train: {
+    position: "absolute",
+    width: "22px",
+    height: "22px",
+    pointerEvents: "none",
+    willChange: "transform",
+    transform: "translate(-50%, -50%)",
+    zIndex: 3,
+  },
+  trainGlow: {
+    position: "absolute",
+    inset: "0",
+    borderRadius: "999px",
+    backgroundColor: "rgba(59, 130, 246, 0.16)",
+    boxShadow: "0 0 14px rgba(59, 130, 246, 0.35)",
+  },
+  trainCore: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    width: "12px",
+    height: "12px",
+    borderRadius: "999px",
+    backgroundColor: "#3B82F6",
+    border: "2px solid #dbeafe",
+    transform: "translate(-50%, -50%)",
   },
   footer: {
     display: "grid",

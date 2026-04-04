@@ -151,6 +151,51 @@ function fuelProgressBar(fuelLevel) {
   );
 }
 
+function MetricsPanel({ eventsPerSecond, latencyMs, mode, modeLoading, onModeRequest, onModeResolved, totalMessages }) {
+  return (
+    <section style={styles.metricsPanel}>
+      <div style={styles.metricsPanelTop}>
+        <SystemMetrics eventsPerSecond={eventsPerSecond} latencyMs={latencyMs} />
+      </div>
+      <div style={styles.metricsPanelBottom}>
+        <LoadControl
+          eventsPerSecond={eventsPerSecond}
+          mode={mode}
+          modeLoading={modeLoading}
+          onModeRequest={onModeRequest}
+          onModeResolved={onModeResolved}
+          totalMessages={totalMessages}
+        />
+      </div>
+    </section>
+  );
+}
+
+function TopStatusStrip({ timestamp, isReplayMode, status, statusCode }) {
+  return (
+    <section style={styles.topInfoGroup}>
+      <div style={styles.topStatusPill}>
+        <span style={styles.topStatusLabel}>ВРЕМЯ</span>
+        <strong style={styles.topStatusValue}>
+          {new Date(timestamp).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+        </strong>
+      </div>
+      <div style={styles.topStatusPill}>
+        <span style={styles.topStatusLabel}>РЕЖИМ</span>
+        <strong style={styles.topStatusValue}>{isReplayMode ? "ПОВТОР" : "РЕАЛЬНОЕ ВРЕМЯ"}</strong>
+      </div>
+      <div style={styles.topStatusPill}>
+        <span style={styles.topStatusLabel}>СОСТОЯНИЕ</span>
+        <strong style={styles.topStatusValue}>{status || statusCode || "Норма"}</strong>
+      </div>
+    </section>
+  );
+}
+
 export default function Dashboard({
   connectionStatus,
   data,
@@ -224,21 +269,33 @@ export default function Dashboard({
       </style>
       <div style={styles.shell}>
         <header style={styles.topBar}>
-          <div>
+          <div style={styles.topTitleBlock}>
             <p style={styles.kicker}>ЛОКОМОТИВНЫЙ МОНИТОРИНГ</p>
             <h1 style={styles.title}>КАБИНА</h1>
           </div>
-          <div style={styles.topRight}>
-            <SystemMetrics eventsPerSecond={eventsPerSecond} latencyMs={latencyMs} />
-            <ExportButton />
+          <div style={styles.topRowControls}>
+            <TopStatusStrip
+              timestamp={timestamp}
+              isReplayMode={isReplayMode}
+              status={status}
+              statusCode={statusCode}
+            />
+            <div style={styles.csvBlock}>
+              <div style={styles.csvCard}>
+                <ExportButton />
+              </div>
+            </div>
+          </div>
+          <div style={styles.connectionBlock}>
             <ConnectionStatus status={connectionStatus} />
           </div>
         </header>
 
         <main style={styles.dashboardGrid}>
-          <div style={styles.gridCell}>
-            <LoadControl
+          <div style={styles.leftRail}>
+            <MetricsPanel
               eventsPerSecond={eventsPerSecond}
+              latencyMs={latencyMs}
               mode={mode}
               modeLoading={modeLoading}
               onModeRequest={(nextMode) => {
@@ -251,22 +308,7 @@ export default function Dashboard({
               }}
               totalMessages={totalMessages}
             />
-          </div>
 
-          <div style={styles.gridCell}>
-            <section style={styles.healthPanel}>
-              <HealthIndex health={health} status={status || statusCode} />
-              <div style={styles.healthFactorsWrap}>
-                <HealthFactors factors={factors} />
-              </div>
-            </section>
-          </div>
-
-          <div style={styles.gridCell}>
-            <SystemStatus systemStatus={translatedSystemStatus} />
-          </div>
-
-          <div style={styles.gridCell}>
             <section style={styles.telemetryColumn}>
               {card(
                 "СКОРОСТЬ",
@@ -329,7 +371,14 @@ export default function Dashboard({
             </section>
           </div>
 
-          <div style={styles.gridCell}>
+          <div style={styles.centerRail}>
+            <section style={styles.healthPanel}>
+              <HealthIndex health={health} status={status || statusCode} />
+              <div style={styles.healthFactorsWrap}>
+                <HealthFactors factors={factors} />
+              </div>
+            </section>
+
             <section style={styles.centerColumn}>
               <MiniMap speed={speed} timestamp={timestamp} />
               <Replay
@@ -338,48 +387,20 @@ export default function Dashboard({
                 onReplayModeChange={setIsReplayMode}
                 replayActive={isReplayMode}
               />
-              <div style={styles.signalStrip}>
-                <div style={styles.signalCell}>
-                  <span style={styles.signalLabel}>ВРЕМЯ</span>
-                  <strong style={styles.signalValue}>
-                    {new Date(timestamp).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    })}
-                  </strong>
-                </div>
-                <div style={styles.signalCell}>
-                  <span style={styles.signalLabel}>РЕЖИМ</span>
-                  <strong style={styles.signalValue}>{isReplayMode ? "ПОВТОР" : "РЕАЛЬНОЕ ВРЕМЯ"}</strong>
-                </div>
-                <div style={styles.signalCell}>
-                  <span style={styles.signalLabel}>СОСТОЯНИЕ</span>
-                  <strong style={styles.signalValue}>{status || statusCode || "Норма"}</strong>
-                </div>
-              </div>
             </section>
           </div>
 
-          <div style={styles.gridCell}>
-            <section style={styles.sideColumn}>
-              <div style={styles.sidePanel}>
-                <Alerts alertGroups={translatedAlerts} />
-              </div>
-              <div style={styles.sidePanel}>
-                <Recommendations recommendations={recommendations} />
-              </div>
-            </section>
+          <div style={styles.rightRail}>
+            <SystemStatus systemStatus={translatedSystemStatus} />
+            <Alerts alertGroups={translatedAlerts} />
+            <Recommendations recommendations={recommendations} />
+            <EventLog events={events} />
           </div>
 
-          <div style={{ ...styles.gridCell, gridColumn: "1 / -1" }}>
+          <div style={styles.fullWidthRow}>
             <div style={styles.trendsPanel}>
               <Charts compact data={chartData} />
             </div>
-          </div>
-
-          <div style={{ ...styles.gridCell, gridColumn: "1 / -1" }}>
-            <EventLog events={events} />
           </div>
         </main>
       </div>
@@ -425,12 +446,14 @@ const styles = {
     boxSizing: "border-box",
   },
   topBar: {
-    display: "flex",
+    display: "grid",
+    gridTemplateColumns: "320px minmax(0, 1fr) auto",
     alignItems: "center",
-    justifyContent: "space-between",
     gap: "16px",
     marginBottom: "16px",
-    flexWrap: "wrap",
+  },
+  topTitleBlock: {
+    minWidth: 0,
   },
   kicker: {
     margin: "0 0 4px",
@@ -444,12 +467,18 @@ const styles = {
     lineHeight: 1,
     letterSpacing: "0.08em",
   },
-  topRight: {
+  topRowControls: {
+    minWidth: 0,
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) auto",
+    gap: "16px",
+    alignItems: "stretch",
+  },
+  connectionBlock: {
+    minWidth: 0,
     display: "flex",
     alignItems: "center",
     justifyContent: "flex-end",
-    flexWrap: "wrap",
-    gap: "10px",
   },
   emptyText: {
     margin: 0,
@@ -459,13 +488,49 @@ const styles = {
   },
   dashboardGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr 2fr 1fr",
-    gridTemplateRows: "auto auto 180px auto",
+    gridTemplateColumns: "320px minmax(0, 1fr) 340px",
     gap: "16px",
     alignItems: "stretch",
   },
-  gridCell: {
+  leftRail: {
     minWidth: 0,
+    display: "grid",
+    gap: "12px",
+    alignContent: "start",
+  },
+  centerRail: {
+    minWidth: 0,
+    display: "grid",
+    gap: "14px",
+    alignContent: "start",
+  },
+  rightRail: {
+    minWidth: 0,
+    display: "grid",
+    gridTemplateRows: "auto auto auto auto",
+    gap: "16px",
+    alignContent: "start",
+  },
+  fullWidthRow: {
+    gridColumn: "1 / -1",
+    minWidth: 0,
+    display: "flex",
+  },
+  metricsPanel: {
+    ...surface,
+    width: "100%",
+    height: "100%",
+    padding: "16px",
+    display: "grid",
+    gridTemplateRows: "auto minmax(0, 1fr)",
+    gap: "12px",
+    boxSizing: "border-box",
+    overflow: "hidden",
+  },
+  metricsPanelTop: {
+    minHeight: 0,
+  },
+  metricsPanelBottom: {
     minHeight: 0,
     display: "flex",
   },
@@ -475,7 +540,7 @@ const styles = {
     padding: "16px",
     display: "grid",
     gridTemplateRows: "minmax(0, 1fr) auto",
-    gap: "16px",
+    gap: "12px",
     minHeight: "100%",
     boxSizing: "border-box",
   },
@@ -485,34 +550,21 @@ const styles = {
   telemetryColumn: {
     width: "100%",
     display: "grid",
-    gridTemplateRows: "repeat(5, minmax(0, 1fr))",
-    gap: "16px",
-    minHeight: "100%",
+    gap: "12px",
+    alignContent: "start",
   },
   centerColumn: {
     width: "100%",
     display: "grid",
-    gridTemplateRows: "minmax(280px, 1fr) auto auto",
-    gap: "16px",
-    minHeight: "100%",
-  },
-  sideColumn: {
-    width: "100%",
-    display: "grid",
-    gridTemplateRows: "minmax(0, 1fr) minmax(0, 1fr)",
-    gap: "16px",
-    minHeight: "100%",
-  },
-  sidePanel: {
-    minWidth: 0,
-    minHeight: 0,
-    display: "flex",
+    gridTemplateRows: "minmax(280px, auto) auto",
+    gap: "12px",
+    alignContent: "start",
   },
   trendsPanel: {
     ...surface,
     width: "100%",
-    height: "180px",
-    padding: "12px 14px",
+    minHeight: "260px",
+    padding: "16px",
     overflow: "hidden",
     boxSizing: "border-box",
   },
@@ -522,12 +574,13 @@ const styles = {
     padding: "14px 16px",
     display: "flex",
     flexDirection: "column",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
+    gap: "8px",
     boxSizing: "border-box",
     overflow: "hidden",
   },
   metricCardTitle: {
-    margin: "0 0 8px",
+    margin: 0,
     color: "#94a3b8",
     letterSpacing: "0.12em",
     fontSize: "0.72rem",
@@ -537,8 +590,8 @@ const styles = {
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
-    gap: "12px",
-    marginBottom: "6px",
+    gap: "10px",
+    marginBottom: "2px",
   },
   metricLabel: {
     color: "#cbd5e1",
@@ -561,7 +614,7 @@ const styles = {
     borderRadius: "999px",
     backgroundColor: "rgba(51, 65, 85, 0.8)",
     overflow: "hidden",
-    marginTop: "8px",
+    marginTop: "4px",
   },
   progressFill: {
     height: "100%",
@@ -571,33 +624,56 @@ const styles = {
     animation: "fuelCriticalPulse 1.2s infinite",
     boxShadow: "0 0 14px rgba(239, 68, 68, 0.55)",
   },
-  signalStrip: {
+  topInfoGroup: {
     ...surface,
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: "12px",
-    width: "100%",
-    padding: "14px 16px",
+    gap: "16px",
+    minWidth: 0,
+    padding: 0,
+    background: "transparent",
+    border: "none",
+    boxShadow: "none",
     boxSizing: "border-box",
-    overflow: "hidden",
   },
-  signalCell: {
+  topStatusPill: {
+    minWidth: 0,
+    minHeight: "84px",
+    borderRadius: "20px",
+    padding: "18px 20px",
+    background: "linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(10, 15, 27, 0.98) 100%)",
+    border: "1px solid rgba(148, 163, 184, 0.16)",
+    boxShadow: "0 18px 40px rgba(2, 6, 23, 0.32)",
     display: "flex",
     flexDirection: "column",
+    justifyContent: "center",
     gap: "6px",
-    minWidth: 0,
   },
-  signalLabel: {
+  topStatusLabel: {
     color: "#64748b",
-    fontSize: "0.72rem",
+    fontSize: "0.68rem",
     letterSpacing: "0.14em",
   },
-  signalValue: {
+  topStatusValue: {
     color: "#f8fafc",
     fontSize: "0.94rem",
     letterSpacing: "0.04em",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
+  },
+  csvBlock: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 0,
+  },
+  csvCard: {
+    ...surface,
+    minHeight: "84px",
+    padding: "0 18px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
 };

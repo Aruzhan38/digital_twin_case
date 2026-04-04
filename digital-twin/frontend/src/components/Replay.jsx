@@ -157,27 +157,22 @@ export default function Replay({
         </span>
       </div>
 
-      <div style={styles.controlsGrid}>
-        <div style={styles.actions}>
-          <button onClick={handleReplayMode} style={styles.primaryButton} disabled={loading}>
-            {loading ? "ЗАГРУЗКА..." : "ЗАГРУЗИТЬ"}
-          </button>
-          <button onClick={handleLiveMode} style={styles.secondaryButton}>
-            ЖИВОЙ
-          </button>
-        </div>
-
-        <div style={styles.actions}>
-          <button onClick={handlePlay} style={styles.secondaryButton} disabled={!replayActive || replayData.length === 0}>
-            ПУСК
-          </button>
-          <button onClick={handlePause} style={styles.secondaryButton} disabled={!replayActive || replayData.length === 0 || !isPlaying}>
-            ПАУЗА
-          </button>
-          <button onClick={handleReset} style={styles.secondaryButton} disabled={!replayActive || replayData.length === 0}>
-            СБРОС
-          </button>
-        </div>
+      <div style={styles.replayControls}>
+        <button onClick={handleReplayMode} style={styles.primaryButton} disabled={loading}>
+          {loading ? "ЗАГРУЗКА..." : "ЗАГРУЗИТЬ"}
+        </button>
+        <button onClick={handleLiveMode} style={styles.secondaryButton}>
+          ЖИВОЙ
+        </button>
+        <button onClick={handlePlay} style={styles.secondaryButton} disabled={!replayActive || replayData.length === 0}>
+          ПУСК
+        </button>
+        <button onClick={handlePause} style={styles.secondaryButton} disabled={!replayActive || replayData.length === 0 || !isPlaying}>
+          ПАУЗА
+        </button>
+        <button onClick={handleReset} style={styles.secondaryButton} disabled={!replayActive || replayData.length === 0}>
+          СБРОС
+        </button>
       </div>
 
       {replayActive ? (
@@ -264,14 +259,11 @@ const styles = {
     backgroundColor: "rgba(37, 99, 235, 0.18)",
     color: "#93c5fd",
   },
-  controlsGrid: {
-    display: "grid",
-    gap: "10px",
-  },
-  actions: {
+  replayControls: {
     display: "flex",
     flexWrap: "wrap",
-    gap: "8px",
+    gap: "12px",
+    alignItems: "center",
   },
   primaryButton: {
     border: "1px solid rgba(56, 189, 248, 0.35)",
