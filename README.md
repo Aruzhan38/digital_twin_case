@@ -15,6 +15,47 @@
 # Решение
 Мы разработали цифровой двойник локомотива, который преобразует «сырую» телеметрию в интерактивную модель. Система рассчитывает индекс здоровья, объясняет причины его падения и дает рекомендации, позволяя оператору сфокусироваться на главном.
 
+### Структура проекта (Project Tree)
+
+```text
+│
+├──  Digital Twin Locomotive
+│   ├──  backend/                # FastAPI Application
+│   │   ├── main.py                # Точка входа и маршрутизация
+│   │   ├── simulator.py           # Математическая модель и генерация данных
+│   │   ├── health.py              # Логика расчета Health Index
+│   │   ├── websocket.py           # Управление real-time соединениями
+│   │   ├── storage.py             # In-memory хранилище (History/Replay)
+│   │   └── requirements.txt       # Зависимости Python
+│   │
+│   ├──  frontend/                # React + Vite Application
+│   │   ├── src/                   # Компоненты интерфейса и логика
+│   │   ├── index.html             # Основной шаблон
+│   │   ├── package.json           # Зависимости и скрипты Node.js
+│   │   └── .gitignore
+│   │
+│   ├──  docs/                   # Презентация и проектная документация
+│   ├──  start.sh                # Скрипт для одновременного запуска проекта
+│   └──  README.md               # Описание решения
+│
+├──  Features
+│    ├──  Real-time telemetry: WebSocket streaming (FastAPI)
+│    ├──  Health Index: Алгоритм оценки состояния (health.py)
+│    ├──  Replay system: Воспроизведение истории из storage.py
+│    └──  Dashboard: Интерактивная визуализация (React)
+│
+├──  Architecture
+│    ├── Backend: Python (FastAPI, Uvicorn)
+│    ├── Frontend: JavaScript (React, Recharts)
+│    └── Data Flow: Simulator -> Storage -> WebSocket -> Frontend
+│
+├──  Как Запускать Проект 
+│    ├── 1. chmod +x start.sh
+│    └── 2. ./start.sh
+│
+└──  Tech Stack: Python, FastAPI, React, Vite, WebSockets
+
+``` 
 # Функции
 
 Real-time telemetry: Потоковая передача данных через WebSockets.
@@ -107,6 +148,6 @@ npm run dev
 # Demo
  Video: https://youtu.be/2-sez38K38g?si=UyMIEz_2AJa59tys 
  
- Live demo: [link
+ Live demo: 
  
- Presentation: [link]
+ Presentation: 
