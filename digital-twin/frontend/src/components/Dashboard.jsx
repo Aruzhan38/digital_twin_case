@@ -3,6 +3,7 @@ import React, { useMemo, useState } from "react";
 import Alerts from "./Alerts.jsx";
 import Charts from "./Charts.jsx";
 import ConnectionStatus from "./ConnectionStatus.jsx";
+import EventLog from "./EventLog.jsx";
 import ExportButton from "./ExportButton.jsx";
 import HealthFactors from "./HealthFactors.jsx";
 import HealthIndex from "./HealthIndex.jsx";
@@ -10,6 +11,7 @@ import LoadControl from "./LoadControl.jsx";
 import MiniMap from "./MiniMap.jsx";
 import Recommendations from "./Recommendations.jsx";
 import Replay from "./Replay.jsx";
+import SystemMetrics from "./SystemMetrics.jsx";
 import SystemStatus from "./SystemStatus.jsx";
 
 const TEXT_MAP = {
@@ -115,6 +117,7 @@ export default function Dashboard({
   data,
   eventsPerSecond,
   history,
+  latencyMs,
   totalMessages,
 }) {
   const [isReplayMode, setIsReplayMode] = useState(false);
@@ -160,6 +163,7 @@ export default function Dashboard({
     oil_temp: oilTemp,
     rpm,
     recommendations,
+    events,
     system_status: systemStatus,
     timestamp,
     voltage,
@@ -177,6 +181,7 @@ export default function Dashboard({
             <h1 style={styles.title}>КАБИНА</h1>
           </div>
           <div style={styles.topRight}>
+            <SystemMetrics eventsPerSecond={eventsPerSecond} latencyMs={latencyMs} />
             <ExportButton />
             <ConnectionStatus status={connectionStatus} />
           </div>
@@ -257,6 +262,13 @@ export default function Dashboard({
 
             <div style={styles.centerColumn}>
               <MiniMap speed={speed} timestamp={timestamp} />
+              <HealthFactors factors={factors} />
+              <Replay
+                onReplayDataChange={setReplayData}
+                onReplayFrameChange={setReplayFrame}
+                onReplayModeChange={setIsReplayMode}
+                replayActive={isReplayMode}
+              />
               <div style={styles.signalStrip}>
                 <div style={styles.signalCell}>
                   <span style={styles.signalLabel}>ВРЕМЯ</span>
@@ -281,7 +293,6 @@ export default function Dashboard({
 
             <div style={styles.rightColumn}>
               <Alerts alertGroups={translatedAlerts} />
-              <HealthFactors factors={factors} />
               <Recommendations recommendations={recommendations} />
             </div>
           </section>
@@ -291,12 +302,7 @@ export default function Dashboard({
               <Charts compact data={chartData} />
             </div>
             <div style={styles.bottomReplay}>
-              <Replay
-                onReplayDataChange={setReplayData}
-                onReplayFrameChange={setReplayFrame}
-                onReplayModeChange={setIsReplayMode}
-                replayActive={isReplayMode}
-              />
+              <EventLog events={events} />
             </div>
           </section>
         </main>
@@ -417,12 +423,15 @@ const styles = {
     background: "rgba(15, 23, 42, 0.72)",
     border: "1px solid rgba(148, 163, 184, 0.12)",
     padding: "8px 10px",
-    overflow: "hidden",
+    overflow: "visible",
     boxSizing: "border-box",
   },
   bottomReplay: {
     minHeight: 0,
     overflow: "hidden",
+    display: "grid",
+    gap: "12px",
+    alignContent: "start",
   },
   panelBox: {
     minHeight: 0,
@@ -447,7 +456,7 @@ const styles = {
   centerColumn: {
     minHeight: 0,
     display: "grid",
-    gridTemplateRows: "minmax(220px, auto) auto",
+    gridTemplateRows: "minmax(220px, auto) auto auto auto",
     gap: "8px",
     maxWidth: "100%",
     overflow: "visible",
@@ -455,7 +464,7 @@ const styles = {
   rightColumn: {
     minHeight: 0,
     display: "grid",
-    gridTemplateRows: "minmax(220px, auto) auto auto",
+    gridTemplateRows: "minmax(220px, auto) auto",
     gap: "8px",
     overflow: "visible",
     maxWidth: "100%",

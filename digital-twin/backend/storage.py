@@ -8,7 +8,9 @@ from typing import Any
 
 
 _RETENTION_SECONDS = int(os.getenv("HISTORY_RETENTION_SECONDS", "600"))
+_MAX_EVENTS = int(os.getenv("MAX_EVENTS", "100"))
 history: deque[dict[str, Any]] = deque()
+events: deque[dict[str, Any]] = deque(maxlen=_MAX_EVENTS)
 _lock = Lock()
 
 
@@ -64,6 +66,23 @@ def get_history(range_minutes: int | None = None) -> list[dict[str, Any]]:
 
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=max(range_minutes, 0))
     return [item for item in items if _parse_timestamp(_event_timestamp(item)) >= cutoff]
+
+
+def add_system_event(event: dict[str, Any]) -> None:
+    with _lock:
+        if events and events[-1].get("message") == event.get("message") and events[-1].get("type") == event.get("type"):
+            return
+        events.append(event)
+
+
+def get_events(limit: int | None = 10) -> list[dict[str, Any]]:
+    with _lock:
+        items = list(events)
+
+    items.reverse()
+    if limit is None:
+        return items
+    return items[: max(limit, 0)]
 
 
 def save(event: dict[str, Any]) -> None:

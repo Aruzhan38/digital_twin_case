@@ -31,6 +31,15 @@ export default function Alerts({ alertGroups }) {
 
   return (
     <section style={{ ...styles.card, ...(criticalAlerts.length > 0 ? styles.criticalCard : null) }}>
+      <style>
+        {`
+          @keyframes criticalPulse {
+            0% { box-shadow: 0 0 6px rgba(239, 68, 68, 0.30); }
+            50% { box-shadow: 0 0 22px rgba(239, 68, 68, 0.60); }
+            100% { box-shadow: 0 0 6px rgba(239, 68, 68, 0.30); }
+          }
+        `}
+      </style>
       <h2 style={styles.title}>АЛЕРТЫ</h2>
       {hasAlerts ? (
         <div style={styles.groupStack}>
@@ -59,6 +68,7 @@ function renderGroup(severity, items) {
         ...styles.group,
         borderLeft: `5px solid ${config.accent}`,
         backgroundColor: config.background,
+        ...(severity === "critical" ? styles.criticalGroup : null),
       }}
     >
       <p style={{ ...styles.groupTitle, color: config.accent }}>{config.label}</p>
@@ -91,6 +101,9 @@ const styles = {
   },
   criticalCard: {
     boxShadow: "0 20px 44px rgba(127, 29, 29, 0.28)",
+  },
+  criticalGroup: {
+    animation: "criticalPulse 1.5s infinite",
   },
   title: {
     margin: "0 0 14px",

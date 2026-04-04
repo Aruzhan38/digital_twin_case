@@ -24,6 +24,9 @@ class SimulatorState:
     voltage: float = 705.0
     current: float = 240.0
     brake_pressure: float = 7.3
+    fuel_empty_timer: int = 0
+    refill_in_progress: bool = False
+    refill_target: float = 0.0
 
 
 class TelemetryPoint(BaseModel):
@@ -49,6 +52,7 @@ class TelemetryPoint(BaseModel):
     oil_temp: float = Field(ge=0, le=150)
     brake_pressure: float = Field(ge=0, le=12)
     engine_state: str
+    fuel_refilled: bool = False
 
 
 _STATE = SimulatorState()
@@ -124,6 +128,7 @@ def _apply_anomaly() -> str | None:
 
 def generate_simulated_data() -> dict[str, Any]:
     global _STATE
+    fuel_refilled = False
 
     speed_target = _clamp(_STATE.speed + random.uniform(-10.0, 10.0), 0.0, 120.0)
 
@@ -182,13 +187,30 @@ def generate_simulated_data() -> dict[str, Any]:
         80.0,
         900.0,
     )
-    _STATE.fuel_level = _clamp(_STATE.fuel_level - random.uniform(0.05, 0.16), 0.0, 100.0)
+    if not _STATE.refill_in_progress:
+        _STATE.fuel_level = _clamp(_STATE.fuel_level - random.uniform(0.05, 0.16), 0.0, 100.0)
 
     anomaly = _apply_anomaly()
 
     if _STATE.fuel_level <= 0:
+        _STATE.fuel_level = 0.0
         _STATE.speed = max(_STATE.speed - 5.0, 0.0)
         _STATE.rpm = _clamp(_STATE.rpm - random.uniform(120.0, 240.0), 450.0, 1200.0)
+        _STATE.fuel_empty_timer += 1
+
+        if _STATE.fuel_empty_timer > 5:
+            _STATE.refill_in_progress = True
+            _STATE.fuel_empty_timer = 0
+            _STATE.refill_target = random.uniform(50.0, 100.0)
+
+    if _STATE.refill_in_progress:
+        _STATE.fuel_level = _clamp(_STATE.fuel_level + 10.0, 0.0, 100.0)
+        if _STATE.fuel_level >= _STATE.refill_target:
+            _STATE.refill_in_progress = False
+            _STATE.refill_target = 0.0
+            fuel_refilled = True
+    elif _STATE.fuel_level > 0:
+        _STATE.fuel_empty_timer = 0
 
     speed = round(_STATE.speed, 1)
     engine_temp = round(_STATE.engine_temp, 1)
@@ -226,6 +248,7 @@ def generate_simulated_data() -> dict[str, Any]:
         oil_temp=round(_STATE.oil_temp, 1),
         brake_pressure=round(_STATE.brake_pressure, 2),
         engine_state=engine_state,
+        fuel_refilled=fuel_refilled,
     )
 
     return _dump_model(telemetry)

@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 
 const POSITION_FACTOR = 0.035;
+const SPEED_LIMIT = 80;
 
 export default function MiniMap({ speed, timestamp }) {
   const [position, setPosition] = useState(0);
+  const numericSpeed = Number(speed || 0);
+  const isOverspeed = numericSpeed > SPEED_LIMIT;
 
   useEffect(() => {
     if (!timestamp) {
@@ -17,13 +20,18 @@ export default function MiniMap({ speed, timestamp }) {
   }, [speed, timestamp]);
 
   return (
-    <section style={styles.card}>
+    <section style={{ ...styles.card, ...(isOverspeed ? styles.warningCard : null) }}>
       <div style={styles.header}>
         <div>
           <h2 style={styles.title}>КАРТА УЧАСТКА ПУТИ</h2>
           <p style={styles.subtitle}>Текущее движение поезда</p>
         </div>
-        <p style={styles.speedText}>{speed ?? "--"} км/ч</p>
+        <div style={styles.speedWrap}>
+          <p style={styles.speedText}>{speed ?? "--"} км/ч</p>
+          <p style={{ ...styles.limitText, ...(isOverspeed ? styles.limitDanger : null) }}>
+            Ограничение: {SPEED_LIMIT} км/ч
+          </p>
+        </div>
       </div>
 
       <div style={styles.labels}>
@@ -36,10 +44,14 @@ export default function MiniMap({ speed, timestamp }) {
         <div style={styles.speedLimitLow}>40</div>
         <div style={styles.track}>
           <div style={styles.speedZone} />
+          <div style={styles.warningZone}>
+            <span style={styles.warningIcon}>⚠</span>
+          </div>
         </div>
         <div style={styles.speedLimitHigh}>90</div>
         <div style={{ ...styles.train, left: `${position}%` }} />
       </div>
+      {isOverspeed ? <p style={styles.warningText}>Превышение скорости</p> : null}
     </section>
   );
 }
@@ -59,6 +71,10 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
+  },
+  warningCard: {
+    border: "1px solid rgba(239, 68, 68, 0.28)",
+    boxShadow: "0 0 24px rgba(239, 68, 68, 0.18)",
   },
   header: {
     display: "flex",
@@ -92,6 +108,20 @@ const styles = {
     fontSize: "0.96rem",
     whiteSpace: "nowrap",
   },
+  speedWrap: {
+    display: "grid",
+    justifyItems: "end",
+    gap: "2px",
+  },
+  limitText: {
+    margin: 0,
+    color: "#94a3b8",
+    fontSize: "0.72rem",
+    whiteSpace: "nowrap",
+  },
+  limitDanger: {
+    color: "#f87171",
+  },
   labels: {
     display: "flex",
     justifyContent: "space-between",
@@ -122,6 +152,21 @@ const styles = {
     width: "22%",
     background: "rgba(248, 250, 252, 0.18)",
   },
+  warningZone: {
+    position: "absolute",
+    left: "56%",
+    width: "12%",
+    top: 0,
+    bottom: 0,
+    background: "rgba(239, 68, 68, 0.32)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  warningIcon: {
+    fontSize: "0.78rem",
+    lineHeight: 1,
+  },
   speedLimitLow: {
     marginRight: "10px",
     color: "#94a3b8",
@@ -144,5 +189,11 @@ const styles = {
     border: "3px solid #0f172a",
     boxShadow: "0 0 0 6px rgba(56, 189, 248, 0.16), 0 6px 16px rgba(14, 165, 233, 0.35)",
     transform: "translate(-50%, -50%)",
+  },
+  warningText: {
+    margin: "8px 0 0",
+    color: "#f87171",
+    fontSize: "0.8rem",
+    fontWeight: 700,
   },
 };

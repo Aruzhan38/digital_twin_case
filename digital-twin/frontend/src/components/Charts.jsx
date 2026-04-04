@@ -10,6 +10,13 @@ import {
   YAxis,
 } from "recharts";
 
+const TREND_WINDOW = 8;
+const TREND_THRESHOLDS = {
+  fuel_chart: 1.5,
+  speed_chart: 2,
+  temperature_chart: 1.5,
+};
+
 function formatTimestamp(value) {
   if (!value) {
     return "--";
@@ -28,6 +35,61 @@ function renderTooltipValue(value, label) {
   return [`${value}`, label];
 }
 
+function getTrendDirection(values, threshold) {
+  if (values.length < 2) {
+    return "stable";
+  }
+
+  const delta = values[values.length - 1] - values[0];
+
+  if (delta > threshold) {
+    return "up";
+  }
+
+  if (delta < -threshold) {
+    return "down";
+  }
+
+  return "stable";
+}
+
+function getTrendLabel(metric, trend) {
+  if (trend === "up") {
+    return {
+      color:
+        metric === "temperature_chart"
+          ? "#ef4444"
+          : "#38bdf8",
+      icon: "↑",
+      text: "растёт",
+    };
+  }
+
+  if (trend === "down") {
+    return {
+      color: metric === "fuel_chart" ? "#ef4444" : "#f59e0b",
+      icon: "↓",
+      text: "падает",
+    };
+  }
+
+  return {
+    color: "#22c55e",
+    icon: "→",
+    text: "стабильна",
+  };
+}
+
+function getTrendMeta(data, key) {
+  const values = data
+    .slice(-TREND_WINDOW)
+    .map((point) => Number(point[key]))
+    .filter((value) => Number.isFinite(value));
+  const trend = getTrendDirection(values, TREND_THRESHOLDS[key] || 1);
+
+  return getTrendLabel(key, trend);
+}
+
 function normalizeChartData(data) {
   return (Array.isArray(data) ? data : []).map((point) => ({
     ...point,
@@ -42,12 +104,19 @@ function normalizeChartData(data) {
 }
 
 function ChartCard({ title, dataKey, stroke, data }) {
+  const trend = getTrendMeta(data, dataKey);
+
   return (
     <div style={styles.card}>
-      <h3 style={styles.cardTitle}>{title}</h3>
-      <div style={styles.chartWrap}>
+      <div style={styles.cardHeader}>
+        <h3 style={styles.cardTitle}>{title}</h3>
+        <p style={{ ...styles.trendBadge, color: trend.color }}>
+          {trend.icon} {trend.text}
+        </p>
+      </div>
+      <div style={styles.chartContainer}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <CartesianGrid stroke="rgba(148, 163, 184, 0.16)" strokeDasharray="3 3" />
             <XAxis
               dataKey="timestamp"
@@ -80,6 +149,11 @@ function ChartCard({ title, dataKey, stroke, data }) {
 
 export default function Charts({ compact = false, data }) {
   const chartData = normalizeChartData(data);
+  const summary = {
+    speed: getTrendMeta(chartData, "speed_chart"),
+    temperature: getTrendMeta(chartData, "temperature_chart"),
+    fuel: getTrendMeta(chartData, "fuel_chart"),
+  };
 
   if (chartData.length === 0) {
     return (
@@ -98,6 +172,17 @@ export default function Charts({ compact = false, data }) {
           <h2 style={styles.title}>ТРЕНДЫ</h2>
           <p style={styles.subtitle}>{compact ? "Последние минуты" : "Последние 5-30 минут, сглаживание EMA"}</p>
         </div>
+        <div style={styles.summary}>
+          <span style={{ ...styles.summaryItem, color: summary.temperature.color }}>
+            Температура {summary.temperature.icon} {summary.temperature.text}
+          </span>
+          <span style={{ ...styles.summaryItem, color: summary.speed.color }}>
+            Скорость {summary.speed.icon} {summary.speed.text}
+          </span>
+          <span style={{ ...styles.summaryItem, color: summary.fuel.color }}>
+            Топливо {summary.fuel.icon} {summary.fuel.text}
+          </span>
+        </div>
       </div>
       <div style={styles.grid}>
         <ChartCard title="СКОРОСТЬ" dataKey="speed_chart" stroke="#38bdf8" data={chartData} />
@@ -114,11 +199,16 @@ const styles = {
     height: "100%",
     minHeight: 0,
     maxWidth: "100%",
-    overflow: "hidden",
+    overflow: "visible",
     boxSizing: "border-box",
   },
   sectionHeader: {
     marginBottom: "8px",
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: "12px",
+    flexWrap: "wrap",
   },
   title: {
     margin: "0 0 4px",
@@ -144,7 +234,7 @@ const styles = {
     height: "100%",
     minHeight: 0,
     maxWidth: "100%",
-    overflow: "hidden",
+    overflow: "visible",
   },
   card: {
     height: "100%",
@@ -155,13 +245,20 @@ const styles = {
     backgroundColor: "#172033",
     border: "1px solid rgba(148, 163, 184, 0.15)",
     boxSizing: "border-box",
-    overflow: "hidden",
+    overflow: "visible",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
   },
+  cardHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "8px",
+    marginBottom: "6px",
+  },
   cardTitle: {
-    margin: "0 0 6px",
+    margin: 0,
     fontSize: "0.82rem",
     letterSpacing: "0.08em",
     color: "#e2e8f0",
@@ -169,11 +266,18 @@ const styles = {
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
-  chartWrap: {
+  trendBadge: {
+    margin: 0,
+    fontSize: "0.74rem",
+    fontWeight: 700,
+    whiteSpace: "nowrap",
+  },
+  chartContainer: {
     width: "100%",
+    height: "180px",
     minHeight: 0,
-    height: "200px",
-    maxHeight: "200px",
+    maxHeight: "180px",
+    overflow: "visible",
   },
   tooltip: {
     backgroundColor: "#0f172a",
@@ -183,6 +287,17 @@ const styles = {
   },
   tooltipLabel: {
     color: "#94a3b8",
+  },
+  summary: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px 12px",
+    justifyContent: "flex-end",
+  },
+  summaryItem: {
+    fontSize: "0.78rem",
+    fontWeight: 700,
+    whiteSpace: "nowrap",
   },
   emptyCard: {
     padding: "12px",

@@ -146,8 +146,13 @@ export default function Replay({
   }
 
   return (
-    <section style={styles.card}>
-      <h2 style={styles.title}>ПОВТОР 5 МИН</h2>
+    <section style={{ ...styles.card, ...(replayActive ? styles.activeCard : null) }}>
+      <div style={styles.header}>
+        <h2 style={styles.title}>ПОВТОР (REPLAY)</h2>
+        <span style={{ ...styles.modeBadge, ...(replayActive ? styles.modeBadgeActive : null) }}>
+          {replayActive ? "РЕЖИМ: ПОВТОР" : "РЕЖИМ: ОНЛАЙН"}
+        </span>
+      </div>
       <div style={styles.actions}>
         <button onClick={handleReplayMode} style={styles.primaryButton} disabled={loading}>
           {loading ? "ЗАГРУЗКА..." : "ЗАГРУЗИТЬ"}
@@ -215,14 +220,40 @@ const styles = {
     flexDirection: "column",
     justifyContent: "space-between",
   },
+  activeCard: {
+    border: "1px solid rgba(56, 189, 248, 0.35)",
+    boxShadow: "0 16px 32px rgba(37, 99, 235, 0.16)",
+  },
+  header: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "10px",
+    marginBottom: "10px",
+    flexWrap: "wrap",
+  },
   title: {
-    margin: "0 0 10px",
+    margin: 0,
     fontSize: "0.9rem",
     letterSpacing: "0.1em",
     color: "#e2e8f0",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
+  },
+  modeBadge: {
+    padding: "6px 10px",
+    borderRadius: "999px",
+    backgroundColor: "rgba(148, 163, 184, 0.12)",
+    color: "#cbd5e1",
+    fontSize: "0.72rem",
+    fontWeight: 700,
+    letterSpacing: "0.06em",
+    whiteSpace: "nowrap",
+  },
+  modeBadgeActive: {
+    backgroundColor: "rgba(37, 99, 235, 0.18)",
+    color: "#93c5fd",
   },
   actions: {
     display: "flex",

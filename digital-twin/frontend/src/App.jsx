@@ -18,6 +18,7 @@ function normalizePayload(payload) {
     ...payload.telemetry,
     ...payload.health,
     system_status: payload.system_status,
+    events: payload.events || [],
     timestamp: payload.timestamp || payload.telemetry.timestamp,
     mode: payload.mode,
   };
@@ -28,8 +29,10 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState("connecting");
   const [eventsPerSecond, setEventsPerSecond] = useState(0);
+  const [latencyMs, setLatencyMs] = useState(0);
   const [totalMessages, setTotalMessages] = useState(0);
   const messageCounterRef = useRef(0);
+  const lastReceiveTimestampRef = useRef(0);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -43,6 +46,22 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!data || !lastReceiveTimestampRef.current) {
+      return;
+    }
+
+    // Measure UI-side latency from message receipt until the next rendered frame.
+    const frameId = window.requestAnimationFrame(() => {
+      const measured = performance.now() - lastReceiveTimestampRef.current;
+      setLatencyMs(Math.max(1, Math.round(measured)));
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [data]);
+
+  useEffect(() => {
     const socket = connectWebSocket(
       (incomingPayload) => {
         const normalizedFrame = normalizePayload(incomingPayload);
@@ -52,6 +71,7 @@ export default function App() {
         }
 
         messageCounterRef.current += 1;
+        lastReceiveTimestampRef.current = performance.now();
         setTotalMessages((count) => count + 1);
         setData(normalizedFrame);
         setHistory((currentHistory) => {
@@ -73,6 +93,7 @@ export default function App() {
       data={data}
       eventsPerSecond={eventsPerSecond}
       history={history}
+      latencyMs={latencyMs}
       totalMessages={totalMessages}
     />
   );

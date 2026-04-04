@@ -20,7 +20,7 @@ def calculate_health_index(metrics: dict[str, Any]) -> dict[str, Any]:
     recommendations: list[str] = []
     factor_impacts: dict[str, int] = {}
     alerts: list[dict[str, str]] = []
-    alert_groups: dict[str, list[str]] = {"critical": [], "warning": [], "normal": []}
+    alert_groups: dict[str, list[str]] = {"critical": [], "warning": [], "normal": [], "info": []}
 
     engine_temp = float(
         metrics.get("engine_temp_smoothed", metrics.get("temperature_engine", metrics.get("engine_temp", 0)))
@@ -36,6 +36,7 @@ def calculate_health_index(metrics: dict[str, Any]) -> dict[str, Any]:
     alert_flag = bool(metrics.get("alert", False))
     anomaly = metrics.get("anomaly")
     engine_state = metrics.get("engine_state", "running")
+    fuel_refilled = bool(metrics.get("fuel_refilled", False))
 
     def add_unique(items: list[str], value: str) -> None:
         if value not in items:
@@ -91,6 +92,10 @@ def calculate_health_index(metrics: dict[str, Any]) -> dict[str, Any]:
     if engine_state == "stopped" and fuel_level <= 0:
         add_unique(reasons, "Поезд остановлен из-за отсутствия топлива")
         add_recommendation("Немедленно остановить поезд и заправить")
+
+    if fuel_refilled:
+        add_alert("Заправка выполнена", "info")
+        add_recommendation("Заправка выполнена")
 
     if anomaly == "electrical_surge":
         add_alert("Скачок напряжения", "critical")
