@@ -18,9 +18,8 @@ export default function SystemMetrics({ eventsPerSecond, latencyMs }) {
 const styles = {
   card: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
     gap: "8px",
-    minWidth: "220px",
     padding: "8px 10px",
     borderRadius: "14px",
     backgroundColor: "rgba(15, 23, 42, 0.72)",

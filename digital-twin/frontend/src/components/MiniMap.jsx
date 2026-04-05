@@ -314,7 +314,8 @@ const styles = {
     fontSize: "0.78rem",
   },
   limitCard: {
-    minWidth: "126px",
+    minWidth: "112px",
+    maxWidth: "100%",
     padding: "10px 12px",
     borderRadius: "12px",
     backgroundColor: "rgba(15, 23, 42, 0.88)",
@@ -404,7 +405,7 @@ const styles = {
   },
   statusRow: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
     gap: "10px",
   },
   metricCard: {

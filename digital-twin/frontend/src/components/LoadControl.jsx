@@ -123,7 +123,7 @@ const styles = {
     display: "flex",
     gap: "10px",
     width: "100%",
-    flexWrap: "nowrap",
+    flexWrap: "wrap",
     marginBottom: "10px",
   },
   normalButton: {
@@ -136,7 +136,7 @@ const styles = {
     fontWeight: 700,
     fontSize: "12px",
     textAlign: "center",
-    whiteSpace: "nowrap",
+    whiteSpace: "normal",
     cursor: "pointer",
   },
   highLoadButton: {
@@ -149,12 +149,12 @@ const styles = {
     fontWeight: 700,
     fontSize: "12px",
     textAlign: "center",
-    whiteSpace: "nowrap",
+    whiteSpace: "normal",
     cursor: "pointer",
   },
   statsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
     gap: "8px",
   },
   statCard: {

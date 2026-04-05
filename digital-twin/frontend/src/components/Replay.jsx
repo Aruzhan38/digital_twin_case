@@ -313,16 +313,12 @@ const styles = {
     margin: 0,
     color: "#cbd5e1",
     fontSize: "0.82rem",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
+    lineHeight: 1.5,
   },
   errorText: {
     margin: "12px 0 0",
     color: "#f87171",
     fontSize: "0.8rem",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
+    lineHeight: 1.5,
   },
 };

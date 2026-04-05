@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import Alerts from "./Alerts.jsx";
 import Charts from "./Charts.jsx";
@@ -171,9 +171,9 @@ function MetricsPanel({ eventsPerSecond, latencyMs, mode, modeLoading, onModeReq
   );
 }
 
-function TopStatusStrip({ timestamp, isReplayMode, status, statusCode }) {
+function TopStatusStrip({ timestamp, isReplayMode, status, statusCode, containerStyle }) {
   return (
-    <section style={styles.topInfoGroup}>
+    <section style={containerStyle || styles.topInfoGroup}>
       <div style={styles.topStatusPill}>
         <span style={styles.topStatusLabel}>⏱ ВРЕМЯ</span>
         <strong style={styles.topStatusValue}>
@@ -196,6 +196,21 @@ function TopStatusStrip({ timestamp, isReplayMode, status, statusCode }) {
   );
 }
 
+const PANEL_BREAKPOINT = 1680;
+const LAPTOP_BREAKPOINT = 1180;
+
+function getViewportMode(width) {
+  if (width >= PANEL_BREAKPOINT) {
+    return "panel";
+  }
+
+  if (width >= LAPTOP_BREAKPOINT) {
+    return "laptop";
+  }
+
+  return "compact";
+}
+
 export default function Dashboard({
   connectionStatus,
   data,
@@ -209,13 +224,70 @@ export default function Dashboard({
   const [modeLoading, setModeLoading] = useState(false);
   const [replayData, setReplayData] = useState([]);
   const [replayFrame, setReplayFrame] = useState(null);
+  const [viewportMode, setViewportMode] = useState(() => {
+    if (typeof window === "undefined") {
+      return "panel";
+    }
+
+    return getViewportMode(window.innerWidth);
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const handleResize = () => {
+      setViewportMode(getViewportMode(window.innerWidth));
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   const activeData = isReplayMode ? replayFrame : data;
   const chartData = useMemo(() => {
     const source = isReplayMode ? replayData : history;
     return source.slice(-60);
   }, [history, isReplayMode, replayData]);
-
+  const isPanel = viewportMode === "panel";
+  const isLaptop = viewportMode === "laptop";
+  const isCompact = viewportMode === "compact";
+  const shellStyle = {
+    ...styles.shell,
+    maxWidth: isPanel ? "1820px" : isLaptop ? "1440px" : "100%",
+    padding: isCompact ? "12px" : isLaptop ? "14px" : "18px",
+  };
+  const topBarStyle = {
+    ...styles.topBar,
+    gridTemplateColumns: isPanel ? "340px minmax(0, 1fr) auto" : "minmax(0, 1fr)",
+  };
+  const topRowControlsStyle = {
+    ...styles.topRowControls,
+    gridTemplateColumns: isCompact ? "minmax(0, 1fr)" : "minmax(0, 1fr) auto",
+  };
+  const topInfoGroupStyle = {
+    ...styles.topInfoGroup,
+    gridTemplateColumns: isCompact ? "repeat(2, minmax(0, 1fr))" : "repeat(3, minmax(0, 1fr))",
+  };
+  const dashboardGridStyle = {
+    ...styles.dashboardGrid,
+    gridTemplateColumns: isPanel ? "360px minmax(0, 1fr) 320px" : isLaptop ? "320px minmax(0, 1fr)" : "minmax(0, 1fr)",
+    gridTemplateAreas: isPanel
+      ? `"left center right" "bottom bottom bottom"`
+      : isLaptop
+        ? `"left center" "right center" "bottom bottom"`
+        : `"left" "center" "right" "bottom"`,
+    gap: isCompact ? "12px" : isLaptop ? "16px" : "20px",
+  };
+  const centerColumnStyle = {
+    ...styles.centerColumn,
+    gridTemplateRows: isCompact ? "auto auto" : "minmax(280px, auto) auto",
+  };
   if (!activeData) {
     return (
       <section style={styles.emptyState}>
@@ -268,18 +340,19 @@ export default function Dashboard({
           }
         `}
       </style>
-      <div style={styles.shell}>
-        <header style={styles.topBar}>
+      <div style={shellStyle}>
+        <header style={topBarStyle}>
           <div style={styles.topTitleBlock}>
             <p style={styles.kicker}>ЛОКОМОТИВНЫЙ МОНИТОРИНГ</p>
             <h1 style={styles.title}>КАБИНА</h1>
           </div>
-          <div style={styles.topRowControls}>
+          <div style={topRowControlsStyle}>
             <TopStatusStrip
               timestamp={timestamp}
               isReplayMode={isReplayMode}
               status={status}
               statusCode={statusCode}
+              containerStyle={topInfoGroupStyle}
             />
             <div style={styles.csvBlock}>
               <div style={styles.csvCard}>
@@ -287,14 +360,14 @@ export default function Dashboard({
               </div>
             </div>
           </div>
-          <div style={styles.connectionBlock}>
+          <div style={{ ...styles.connectionBlock, justifyContent: isPanel ? "flex-end" : "flex-start" }}>
             <div style={styles.connectionCard}>
               <ConnectionStatus status={connectionStatus} />
             </div>
           </div>
         </header>
 
-        <main style={styles.dashboardGrid}>
+        <main style={dashboardGridStyle}>
           <div style={styles.leftRail}>
             <MetricsPanel
               eventsPerSecond={eventsPerSecond}
@@ -382,7 +455,7 @@ export default function Dashboard({
               </div>
             </section>
 
-            <section style={styles.centerColumn}>
+            <section style={centerColumnStyle}>
               <MiniMap speed={speed} timestamp={timestamp} />
               <Replay
                 onReplayDataChange={setReplayData}
@@ -450,7 +523,6 @@ const styles = {
   },
   topBar: {
     display: "grid",
-    gridTemplateColumns: "390px minmax(0, 1fr) auto",
     alignItems: "center",
     gap: "12px",
     marginBottom: "16px",
@@ -473,7 +545,6 @@ const styles = {
   topRowControls: {
     minWidth: 0,
     display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr) auto",
     gap: "12px",
     alignItems: "stretch",
   },
@@ -491,30 +562,32 @@ const styles = {
   },
   dashboardGrid: {
     display: "grid",
-    gridTemplateColumns: "390px minmax(0, 1fr) 330px",
-    gap: "20px",
     alignItems: "stretch",
   },
   leftRail: {
+    gridArea: "left",
     minWidth: 0,
     display: "grid",
     gap: "14px",
     alignContent: "start",
   },
   centerRail: {
+    gridArea: "center",
     minWidth: 0,
     display: "grid",
     gap: "14px",
     alignContent: "start",
   },
   rightRail: {
+    gridArea: "right",
     minWidth: 0,
     display: "grid",
-    gridTemplateRows: "auto auto auto auto",
+    gridTemplateRows: "repeat(4, auto)",
     gap: "16px",
     alignContent: "start",
   },
   fullWidthRow: {
+    gridArea: "bottom",
     gridColumn: "1 / -1",
     minWidth: 0,
     display: "flex",
@@ -630,7 +703,6 @@ const styles = {
   topInfoGroup: {
     ...surface,
     display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
     gap: "12px",
     minWidth: 0,
     padding: 0,

@@ -149,6 +149,12 @@ function ChartCard({ title, dataKey, stroke, data }) {
 
 export default function Charts({ compact = false, data }) {
   const chartData = normalizeChartData(data);
+  const gridStyle = {
+    ...styles.grid,
+    gridTemplateColumns: compact
+      ? "repeat(3, minmax(0, 1fr))"
+      : "repeat(auto-fit, minmax(220px, 1fr))",
+  };
   const summary = {
     speed: getTrendMeta(chartData, "speed_chart"),
     temperature: getTrendMeta(chartData, "temperature_chart"),
@@ -184,7 +190,7 @@ export default function Charts({ compact = false, data }) {
           </span>
         </div>
       </div>
-      <div style={styles.grid}>
+      <div style={gridStyle}>
         <ChartCard title="СКОРОСТЬ" dataKey="speed_chart" stroke="#38bdf8" data={chartData} />
         <ChartCard title="ТЕМПЕРАТУРА" dataKey="temperature_chart" stroke="#f97316" data={chartData} />
         <ChartCard title="ТОПЛИВО" dataKey="fuel_chart" stroke="#22c55e" data={chartData} />
@@ -231,7 +237,6 @@ const styles = {
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
     gap: "12px",
     flex: 1,
     minHeight: 0,
@@ -239,8 +244,7 @@ const styles = {
     overflow: "hidden",
   },
   card: {
-    height: "220px",
-    minHeight: "200px",
+    minHeight: "220px",
     maxWidth: "100%",
     padding: "16px",
     borderRadius: "18px",
@@ -277,8 +281,7 @@ const styles = {
   chartContainer: {
     width: "100%",
     flex: 1,
-    maxHeight: "140px",
-    minHeight: "120px",
+    minHeight: "140px",
     overflow: "hidden",
   },
   tooltip: {
